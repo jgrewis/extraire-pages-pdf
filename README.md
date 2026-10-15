@@ -12,6 +12,8 @@ Petit outil Windows pour extraire des pages d'un PDF : on dépose le fichier sur
 
 - **Visionneuse** (`#visionneuse`) : lire un PDF, zoomer, remplir ses champs de formulaire, surligner, dessiner, ajouter du texte ou des notes, annuler, puis télécharger le PDF annoté. Surlignages, dessins et notes sont enregistrés comme de vraies annotations (modifiables dans Acrobat) ; le texte ajouté est inscrit dans la page.
 
+Sous le résultat d'Extraire, de Fusionner et de la Visionneuse, **Envoyer vers** transmet le PDF obtenu (pages choisies et réordonnées, fusion, annotations et champs remplis) à un autre outil, sans téléchargement. L'outil de départ garde son état.
+
 L'habillage suit la charte « Outils PDF » (crème, vert forêt, ocre, sauge, sable ; DM Serif Display et Jost ; thèmes clair et sombre). Ses variables sont dans [`tokens.css`](tokens.css) : chaque outil garde sa couleur sur sa tuile, sa page et sa zone de dépôt.
 
 Les fichiers ne quittent pas l'ordinateur (pdf-lib, pdf.js, SortableJS, JSZip, Tesseract.js). Publiée avec GitHub Pages : https://jgrewis.github.io/extraire-pages-pdf/
