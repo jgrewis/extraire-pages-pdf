@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Extraire pages PDF</title>
-<meta name="description" content="Extraire, réordonner et fusionner des pages PDF dans le navigateur.">
+<title>Outils PDF</title>
+<meta name="description" content="Extraire, réordonner et fusionner des pages PDF, ou convertir un PDF en Markdown, dans le navigateur.">
 <style>
   :root {
     --bg: #f6f6f4; --card: #ffffff; --text: #1d1d1b; --muted: #6b6b66;
@@ -70,9 +70,9 @@
   button.small { padding: 5px 12px; font-size: .88rem; }
   button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
   button:disabled { opacity: .5; cursor: default; }
-  #msg { margin-top: 12px; font-size: .95rem; min-height: 1.5em; }
-  #msg.error { color: var(--error); }
-  #msg.ok { color: var(--ok); }
+  #msg, #mdMsg { margin-top: 12px; font-size: .95rem; min-height: 1.5em; }
+  #msg.error, #mdMsg.error { color: var(--error); }
+  #msg.ok, #mdMsg.ok { color: var(--ok); }
 
   .grid-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; margin: 24px 0 10px; }
   .grid-head h2 { font-size: 1.05rem; margin: 0; }
@@ -108,6 +108,46 @@
   .thumb.selected .pos { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
   .thumb:not(.selected) .page { opacity: .4; }
   .thumb.ghost { opacity: .3; }
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 20px; overflow-x: auto; }
+  .tabs button {
+    border: none; border-bottom: 3px solid transparent; border-radius: 0; padding: 10px 16px;
+    font-weight: 600; color: var(--muted); white-space: nowrap;
+  }
+  .tabs button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+  .tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+  #mdDrop {
+    border: 2px dashed var(--border); border-radius: 10px; padding: 32px 16px;
+    text-align: center; cursor: pointer; transition: background .15s, border-color .15s;
+  }
+  #mdDrop strong { display: block; margin-bottom: 4px; }
+  #mdDrop span { color: var(--muted); font-size: .9rem; }
+  body.dragging #mdDrop { background: var(--drop); border-color: var(--accent); }
+  #mdList { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 8px; }
+  #mdList:empty { display: none; }
+  #mdList li {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+    padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg);
+  }
+  #mdList .state { width: 1.2em; text-align: center; font-weight: 700; }
+  #mdList .ok .state { color: var(--ok); }
+  #mdList .erreur .state { color: var(--error); }
+  #mdList .name { font-weight: 600; word-break: break-all; flex: 1; min-width: 140px; }
+  #mdList .detail { color: var(--muted); font-size: .88rem; }
+  #mdList .erreur .detail { color: var(--error); }
+  #mdList .btns { display: flex; gap: 6px; }
+  #mdList li.current { border-color: var(--accent); }
+  .md-bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-top: 16px; }
+  .md-bar label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  .md-bar .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+  #mdPreviewWrap { margin-top: 24px; }
+  #mdPreviewWrap .grid-head { margin-top: 0; }
+  #mdPreview {
+    width: 100%; min-height: 420px; resize: vertical; padding: 14px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--card); color: var(--text);
+    font: 13px/1.55 ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  .note { color: var(--muted); font-size: .85rem; margin: 12px 0 0; }
   footer { color: var(--muted); font-size: .8rem; text-align: center; }
   @media (max-width: 480px) {
     #grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
@@ -116,7 +156,13 @@
 </head>
 <body>
 <main>
-  <h1>Extraire pages PDF</h1>
+  <h1>Outils PDF</h1>
+  <div class="tabs" role="tablist" aria-label="Outils">
+    <button type="button" role="tab" id="tabbtn-pages" data-tab="pages" aria-controls="tab-pages">Pages PDF</button>
+    <button type="button" role="tab" id="tabbtn-markdown" data-tab="markdown" aria-controls="tab-markdown">PDF → Markdown</button>
+  </div>
+
+  <section id="tab-pages" role="tabpanel" aria-labelledby="tabbtn-pages">
   <p class="sub">Choisissez, réordonnez et fusionnez des pages PDF, puis téléchargez le résultat.</p>
 
   <div class="card">
@@ -160,6 +206,38 @@
     </div>
     <div id="grid"></div>
   </div>
+  </section>
+
+  <section id="tab-markdown" role="tabpanel" aria-labelledby="tabbtn-markdown" hidden>
+  <p class="sub">Transformez un PDF, texte ou scanné, en fichier Markdown (.md).</p>
+
+  <div class="card">
+    <div id="mdDrop" tabindex="0" role="button" aria-label="Choisir des PDF à convertir">
+      <strong>Déposez un ou plusieurs PDF ici</strong>
+      <span>ou cliquez pour choisir · la conversion démarre aussitôt</span>
+    </div>
+    <input type="file" id="mdFile" accept="application/pdf,.pdf" multiple hidden>
+    <ul id="mdList"></ul>
+    <div class="md-bar">
+      <label title="Les pages sans texte (scans, photos) sont lues par reconnaissance de caractères"><input type="checkbox" id="mdOcr" checked> OCR automatique des pages scannées</label>
+      <div class="actions">
+        <button type="button" id="mdAdd">+ Ajouter des PDF</button>
+        <button type="button" id="mdZip" hidden>Tout télécharger (.zip)</button>
+        <button type="button" id="mdReset" hidden>Tout effacer</button>
+      </div>
+    </div>
+    <div id="mdMsg" role="status"></div>
+    <p class="note">Repère les titres, paragraphes, listes et le gras. Les tableaux et les mises en page en colonnes sont rendus comme du texte simple. L'OCR (français et anglais) télécharge environ 10 Mo la première fois.</p>
+  </div>
+
+  <div id="mdPreviewWrap" hidden>
+    <div class="grid-head">
+      <h2 id="mdPreviewName">Aperçu</h2>
+      <span class="btns"><button type="button" class="small" id="mdCopy">Copier</button> <button type="button" class="small primary" id="mdSave">Télécharger le .md</button></span>
+    </div>
+    <textarea id="mdPreview" readonly aria-labelledby="mdPreviewName"></textarea>
+  </div>
+  </section>
 
   <footer>Les fichiers restent sur votre ordinateur : tout se passe dans le navigateur, rien n'est envoyé.</footer>
 </main>
@@ -424,7 +502,8 @@ document.addEventListener("drop", e => {
   document.body.classList.remove("dragging");
   if (!isFileDrag(e)) return;
   e.preventDefault();
-  addFiles(e.dataTransfer.files);
+  if (activeTab() === "markdown") mdAddFiles(e.dataTransfer.files);
+  else addFiles(e.dataTransfer.files);
 });
 
 $("apply").addEventListener("click", applySelection);
@@ -433,6 +512,360 @@ $("all").addEventListener("click", () => { items().forEach(el => setSelected(el,
 $("none").addEventListener("click", () => { items().forEach(el => setSelected(el, false)); refresh(); });
 $("export").addEventListener("click", exportPages);
 $("reset").addEventListener("click", resetAll);
+
+/* ---------- Onglets ---------- */
+const tabs = [...document.querySelectorAll('[role="tab"]')];
+const activeTab = () => tabs.find(t => t.getAttribute("aria-selected") === "true").dataset.tab;
+function showTab(name) {
+  tabs.forEach(t => {
+    const on = t.dataset.tab === name;
+    t.setAttribute("aria-selected", on);
+    t.tabIndex = on ? 0 : -1;
+    $("tab-" + t.dataset.tab).hidden = !on;
+  });
+  history.replaceState(null, "", name === "markdown" ? "#markdown" : location.pathname + location.search);
+}
+tabs.forEach(t => t.addEventListener("click", () => showTab(t.dataset.tab)));
+document.querySelector('[role="tablist"]').addEventListener("keydown", e => {
+  if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+  const i = tabs.findIndex(t => t.getAttribute("aria-selected") === "true");
+  const next = tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
+  showTab(next.dataset.tab); next.focus();
+});
+showTab(location.hash === "#markdown" ? "markdown" : "pages");
+
+/* ---------- PDF → Markdown ---------- */
+const mdFiles = [];      // { file, name, state, text, row }
+let mdCurrent = null, mdRunning = false, ocrWorker = null;
+
+const BULLET = /^\s*([•●▪■◦○·–—➢►✓\-*])(\s+|$)/;
+const escapeMd = s => s.replace(/([*_`\\])/g, "\\$1");
+
+function mdMsg(text, kind = "") { $("mdMsg").textContent = text; $("mdMsg").className = kind; }
+
+// Une page -> lignes { text (Markdown), plain, x, y, size, bold, bullet }
+async function pageLines(page) {
+  const tc = await page.getTextContent();
+  // Le nom réel des polices (…-Bold, …-Italic) n'est connu qu'après chargement des ressources
+  try { await page.getOperatorList(); } catch (e) {}
+  const styleCache = {};
+  const styleOf = fontName => {
+    if (!(fontName in styleCache)) {
+      let bold = false, italic = false;
+      try {
+        const f = page.commonObjs.get(fontName);
+        const n = (f && f.name) || "";
+        bold = !!(f && f.bold) || /bold|black|heavy|semibold|demi/i.test(n);
+        italic = !!(f && f.italic) || /italic|oblique/i.test(n);
+      } catch (e) {}
+      styleCache[fontName] = { bold, italic };
+    }
+    return styleCache[fontName];
+  };
+
+  const items = tc.items
+    .filter(it => typeof it.str === "string" && it.str.length)
+    .map(it => ({
+      str: it.str, x: it.transform[4], y: it.transform[5], w: it.width,
+      size: Math.hypot(it.transform[2], it.transform[3]) || it.height || 10,
+      ...styleOf(it.fontName),
+    }))
+    .sort((a, b) => b.y - a.y || a.x - b.x);
+
+  const groups = [];
+  for (const it of items) {
+    const g = groups[groups.length - 1];
+    if (g && Math.abs(g.y - it.y) <= Math.max(g.size, it.size) * 0.5) {
+      g.items.push(it); g.size = Math.max(g.size, it.size);
+    } else groups.push({ y: it.y, size: it.size, items: [it] });
+  }
+
+  return groups.map(g => {
+    const its = g.items.sort((a, b) => a.x - b.x);
+    // Puce en début de ligne : on la retire, la ligne devient un élément de liste
+    let bullet = false;
+    const first = its.find(i => i.str.trim());
+    const m = first && first.str.match(BULLET);
+    if (m && (first.str.length > m[0].length || its.length > 1)) {
+      bullet = true;
+      first.str = first.str.slice(m[0].length);
+    }
+    // Segments de même style ; les espaces seuls prennent le style courant
+    const segs = [];
+    let prev = null;
+    for (const it of its) {
+      let s = it.str;
+      if (prev) {
+        const gap = it.x - (prev.x + prev.w);
+        if (gap > prev.size * 0.2 && !/\s$/.test(prev.str) && !/^\s/.test(s)) s = " " + s;
+      }
+      prev = it;
+      const last = segs[segs.length - 1];
+      if (last && (!s.trim() || (last.bold === it.bold && last.italic === it.italic))) last.s += s;
+      else segs.push({ s, bold: it.bold, italic: it.italic });
+    }
+    const plain = segs.map(x => x.s).join("").replace(/\s+/g, " ").trim();
+    const visible = segs.filter(x => x.s.trim());
+    const allBold = visible.length > 0 && visible.every(x => x.bold);
+    const text = segs.map(x => {
+      const core = x.s.trim();
+      if (!core) return x.s;
+      const lead = x.s.match(/^\s*/)[0], trail = x.s.match(/\s*$/)[0];
+      let t = escapeMd(core);
+      if (x.bold && !allBold) t = `**${t}**`;
+      if (x.italic) t = `*${t}*`;
+      return lead + t + trail;
+    }).join("").replace(/\s+/g, " ").trim();
+    return { text, plain, x: its[0].x, y: g.y, size: g.size, bold: allBold, bullet };
+  }).filter(l => l.plain);
+}
+
+async function loadOcr() {
+  if (!window.Tesseract) {
+    await new Promise((res, rej) => {
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
+      s.onload = res;
+      s.onerror = () => rej(new Error("impossible de charger l'OCR"));
+      document.head.append(s);
+    });
+  }
+  if (!ocrWorker) ocrWorker = await Tesseract.createWorker("fra+eng");
+  return ocrWorker;
+}
+
+// Page scannée : rendu en image puis reconnaissance de caractères -> paragraphes
+async function ocrPage(page) {
+  const worker = await loadOcr();
+  const base = page.getViewport({ scale: 1 });
+  const vp = page.getViewport({ scale: Math.min(3, 2000 / base.width) });
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.ceil(vp.width); canvas.height = Math.ceil(vp.height);
+  await page.render({ canvasContext: canvas.getContext("2d"), viewport: vp }).promise;
+  const { data } = await worker.recognize(canvas);
+  return data.text.split(/\n\s*\n/)
+    .map(p => p.replace(/(\p{L})-\n(?=\p{Ll})/gu, "$1").replace(/\s*\n\s*/g, " ").trim())
+    .filter(Boolean);
+}
+
+function joinText(a, b) {
+  if (/\p{L}-$/u.test(a) && /^\p{Ll}/u.test(b)) return a.slice(0, -1) + b;
+  return a + " " + b;
+}
+
+function buildMarkdown(pagesData) {
+  const textPages = pagesData.filter(p => p.lines);
+  const norm = s => s.replace(/\d+/g, "#").replace(/\s+/g, " ").trim().toLowerCase();
+
+  // En-têtes et pieds de page répétés d'une page à l'autre
+  const repeated = new Set();
+  if (textPages.length >= 3) {
+    const counts = new Map();
+    for (const p of textPages) {
+      new Set([...p.lines.slice(0, 2), ...p.lines.slice(-2)].map(l => norm(l.plain)))
+        .forEach(k => counts.set(k, (counts.get(k) || 0) + 1));
+    }
+    counts.forEach((c, k) => { if (k && c >= Math.max(3, textPages.length * 0.6)) repeated.add(k); });
+  }
+  const pageNum = /^[-–\s]*(page\s*)?#(\s*(\/|sur|of)\s*#)?[-–\s]*$/;
+  const isNoise = (l, i, n) => {
+    const edge = i < 2 || i >= n - 2;
+    const k = norm(l.plain);
+    return edge && (repeated.has(k) || pageNum.test(k));
+  };
+
+  // Taille du corps de texte = taille la plus répandue (pondérée par le nombre de caractères)
+  const bySize = new Map();
+  textPages.forEach(p => p.lines.forEach(l => {
+    const s = Math.round(l.size * 2) / 2;
+    bySize.set(s, (bySize.get(s) || 0) + l.plain.length);
+  }));
+  let body = 10, best = -1;
+  bySize.forEach((c, s) => { if (c > best) { best = c; body = s; } });
+  const headingSizes = [...bySize.keys()].filter(s => s >= body * 1.15).sort((a, b) => b - a);
+  const levelOf = size => {
+    const i = headingSizes.indexOf(Math.round(size * 2) / 2);
+    return i < 0 ? 0 : Math.min(i + 1, 3);
+  };
+  const boldLevel = Math.min(Math.max(Math.min(headingSizes.length, 3) + 1, 2), 4);
+
+  const blocks = [];
+  pagesData.forEach((p, pageIndex) => {
+    if (p.ocr) { p.ocr.forEach(t => blocks.push({ type: "p", text: escapeMd(t), page: pageIndex })); return; }
+    let firstOnPage = true;
+    p.lines.forEach((l, i) => {
+      if (isNoise(l, i, p.lines.length)) return;
+      const prev = blocks[blocks.length - 1];
+      const samePage = prev && prev.page === pageIndex;
+      const gapOk = samePage && prev.y - l.y <= l.size * 1.9;
+      const level = l.plain.length < 150 && !l.bullet ? levelOf(l.size) : 0;
+      const boldHeading = !level && l.bold && !l.bullet && l.plain.length < 100 && !/[.,;:]$/.test(l.plain)
+        && !(gapOk && prev.type === "p" && !/[.!?:]$/.test(prev.plain));
+
+      if (level || boldHeading) {
+        const lv = level || boldLevel;
+        const plain = l.plain;
+        if (prev && prev.type === "h" && prev.level === lv && gapOk) { prev.text += " " + plain; prev.y = l.y; }
+        else blocks.push({ type: "h", level: lv, text: plain, y: l.y, page: pageIndex });
+      } else if (l.bullet || /^\d{1,3}[.)]\s/.test(l.plain)) {
+        blocks.push({ type: "li", bullet: l.bullet, text: l.text, plain: l.plain, x: l.x, y: l.y, page: pageIndex });
+      } else if (prev && (prev.type === "p" || prev.type === "li") && gapOk
+                 && !(prev.type === "li" && l.x <= prev.x - l.size * 0.5)) {
+        prev.text = joinText(prev.text, l.text); prev.plain = joinText(prev.plain, l.plain); prev.y = l.y;
+      } else if (firstOnPage && prev && prev.type === "p" && prev.page === pageIndex - 1
+                 && !/[.!?:;»"”)]$/.test(prev.plain) && /^\p{Ll}/u.test(l.plain)) {
+        // Paragraphe coupé par un changement de page
+        prev.text = joinText(prev.text, l.text); prev.plain = joinText(prev.plain, l.plain);
+        prev.y = l.y; prev.page = pageIndex;
+      } else {
+        blocks.push({ type: "p", text: l.text, plain: l.plain, x: l.x, y: l.y, page: pageIndex });
+      }
+      firstOnPage = false;
+    });
+  });
+
+  let out = "";
+  blocks.forEach((b, i) => {
+    let s;
+    if (b.type === "h") s = "#".repeat(b.level) + " " + b.text;
+    else if (b.type === "li") s = (b.bullet ? "- " : "") + b.text;
+    else s = b.text.replace(/^(#{1,6}\s|>|[-+]\s|\d+[.)]\s)/, "\\$1");
+    const prev = blocks[i - 1];
+    out += i === 0 ? s : (prev.type === "li" && b.type === "li" ? "\n" : "\n\n") + s;
+  });
+  return out.replace(/\n{3,}/g, "\n\n").trim() + "\n";
+}
+
+async function pdfToMarkdown(file, progress) {
+  const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+  const pagesData = [];
+  let ocrCount = 0;
+  try {
+    for (let n = 1; n <= doc.numPages; n++) {
+      progress(`page ${n} / ${doc.numPages}`);
+      const page = await doc.getPage(n);
+      const lines = await pageLines(page);
+      const chars = lines.reduce((s, l) => s + l.plain.replace(/\s/g, "").length, 0);
+      if (chars < 20 && $("mdOcr").checked) {
+        progress(`OCR page ${n} / ${doc.numPages}`);
+        pagesData.push({ ocr: await ocrPage(page) });
+        ocrCount++;
+      } else {
+        pagesData.push({ lines });
+      }
+      page.cleanup();
+    }
+  } finally {
+    doc.destroy();
+  }
+  return { text: buildMarkdown(pagesData), pages: pagesData.length, ocrCount };
+}
+
+function mdRow(entry) {
+  const li = document.createElement("li");
+  li.innerHTML = `<span class="state" aria-hidden="true">○</span><span class="name"></span><span class="detail"></span>
+    <span class="btns"><button type="button" class="small" data-act="view" disabled>Aperçu</button><button type="button" class="small" data-act="save" disabled>Télécharger</button></span>`;
+  li.querySelector(".name").textContent = entry.file.name;
+  li.querySelector('[data-act="view"]').addEventListener("click", () => mdShow(entry));
+  li.querySelector('[data-act="save"]').addEventListener("click", () => mdSave(entry));
+  return li;
+}
+
+function mdSetState(entry, state, detail) {
+  entry.state = state;
+  const li = entry.row;
+  li.className = state + (entry === mdCurrent ? " current" : "");
+  li.querySelector(".state").textContent = { attente: "○", encours: "…", ok: "✓", erreur: "✕" }[state];
+  li.querySelector(".detail").textContent = detail;
+  li.querySelectorAll("button").forEach(b => { b.disabled = state !== "ok"; });
+}
+
+function mdRefresh() {
+  const done = mdFiles.filter(e => e.state === "ok").length;
+  $("mdZip").hidden = done < 2;
+  $("mdReset").hidden = mdFiles.length === 0;
+  $("mdDrop").querySelector("strong").textContent = mdFiles.length ? "Déposez d'autres PDF ici" : "Déposez un ou plusieurs PDF ici";
+}
+
+function mdShow(entry) {
+  mdCurrent = entry;
+  mdFiles.forEach(e => e.row.classList.toggle("current", e === entry));
+  $("mdPreviewName").textContent = entry.name + ".md";
+  $("mdPreview").value = entry.text;
+  $("mdPreviewWrap").hidden = false;
+}
+
+async function mdSave(entry) {
+  const saved = await saveBlob(new Blob([entry.text], { type: "text/markdown" }), entry.name + ".md", "text/markdown", "md");
+  if (saved) mdMsg(`Enregistré : ${saved}`, "ok");
+}
+
+function mdAddFiles(list) {
+  const files = [...list].filter(f => /\.pdf$/i.test(f.name) || f.type === "application/pdf");
+  if (!files.length) { mdMsg("Aucun fichier PDF parmi les fichiers déposés.", "error"); return; }
+  mdMsg("");
+  for (const file of files) {
+    const entry = { file, name: file.name.replace(/\.pdf$/i, ""), state: "attente", text: null };
+    entry.row = mdRow(entry);
+    $("mdList").append(entry.row);
+    mdFiles.push(entry);
+    mdSetState(entry, "attente", "en attente");
+  }
+  mdRefresh();
+  mdRun();
+}
+
+// Un fichier à la fois, comme sur le Pi : l'OCR est gourmand
+async function mdRun() {
+  if (mdRunning) return;
+  mdRunning = true;
+  let entry;
+  while ((entry = mdFiles.find(e => e.state === "attente"))) {
+    const e = entry;
+    mdSetState(e, "encours", "lecture…");
+    try {
+      const r = await pdfToMarkdown(e.file, s => mdSetState(e, "encours", s));
+      e.text = r.text;
+      const words = (r.text.match(/\p{L}+/gu) || []).length;
+      mdSetState(e, "ok", `${r.pages} p. · ${words} mots${r.ocrCount ? ` · OCR sur ${r.ocrCount} p.` : ""}`);
+      if (!mdCurrent || !mdFiles.includes(mdCurrent)) mdShow(e);
+    } catch (err) {
+      mdSetState(e, "erreur", err.message || "échec");
+    }
+    mdRefresh();
+  }
+  if (ocrWorker) { await ocrWorker.terminate(); ocrWorker = null; }
+  mdRunning = false;
+}
+
+const mdPick = () => $("mdFile").click();
+$("mdDrop").addEventListener("click", mdPick);
+$("mdDrop").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); mdPick(); } });
+$("mdAdd").addEventListener("click", mdPick);
+$("mdFile").addEventListener("change", e => { mdAddFiles(e.target.files); e.target.value = ""; });
+$("mdSave").addEventListener("click", () => mdCurrent && mdSave(mdCurrent));
+$("mdCopy").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText($("mdPreview").value); }
+  catch (e) { $("mdPreview").select(); document.execCommand("copy"); }
+  $("mdCopy").textContent = "Copié ✓";
+  setTimeout(() => { $("mdCopy").textContent = "Copier"; }, 1500);
+});
+$("mdZip").addEventListener("click", async () => {
+  const zip = new JSZip(), used = new Set();
+  mdFiles.filter(e => e.state === "ok").forEach(e => {
+    let n = e.name + ".md", i = 2;
+    while (used.has(n)) n = `${e.name} (${i++}).md`;
+    used.add(n); zip.file(n, e.text);
+  });
+  const saved = await saveBlob(await zip.generateAsync({ type: "blob" }), "markdown.zip", "application/zip", "zip");
+  if (saved) mdMsg(`Enregistré : ${saved}`, "ok");
+});
+$("mdReset").addEventListener("click", () => {
+  if (mdRunning) { mdMsg("Attendez la fin de la conversion en cours.", "error"); return; }
+  mdFiles.length = 0; mdCurrent = null;
+  $("mdList").replaceChildren(); $("mdPreviewWrap").hidden = true; mdMsg("");
+  mdRefresh();
+});
 </script>
 </body>
 </html>

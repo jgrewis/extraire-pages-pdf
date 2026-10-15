@@ -8,9 +8,10 @@ Petit outil Windows pour extraire des pages d'un PDF : on dépose le fichier sur
 
 - aperçu des pages en vignettes, à glisser pour changer l'ordre et à cliquer pour garder ou écarter une page ;
 - fusion : on dépose plusieurs PDF, toutes leurs pages arrivent dans la même grille ;
-- export en un seul PDF ou un PDF par page (.zip).
+- export en un seul PDF ou un PDF par page (.zip) ;
+- onglet **PDF → Markdown** : convertit un ou plusieurs PDF en `.md` (titres, paragraphes, listes, gras ; en-têtes, pieds et numéros de page retirés), avec OCR automatique (français, anglais) des pages scannées. Inspiré du convertisseur du dashboard du Pi, mais tout se fait dans le navigateur.
 
-Les fichiers ne quittent pas l'ordinateur (pdf-lib, pdf.js, SortableJS, JSZip). Publiée avec GitHub Pages : https://jgrewis.github.io/extraire-pages-pdf/
+Les fichiers ne quittent pas l'ordinateur (pdf-lib, pdf.js, SortableJS, JSZip, Tesseract.js). Publiée avec GitHub Pages : https://jgrewis.github.io/extraire-pages-pdf/
 
 ## Installation
 
