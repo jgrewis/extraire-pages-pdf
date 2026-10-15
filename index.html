@@ -148,6 +148,74 @@
     font: 13px/1.55 ui-monospace, "Cascadia Mono", Consolas, monospace;
   }
   .note { color: var(--muted); font-size: .85rem; margin: 12px 0 0; }
+
+  #vDrop {
+    border: 2px dashed var(--border); border-radius: 10px; padding: 40px 16px;
+    text-align: center; cursor: pointer; transition: background .15s, border-color .15s;
+  }
+  #vDrop strong { display: block; margin-bottom: 4px; }
+  #vDrop span { color: var(--muted); font-size: .9rem; }
+  body.dragging #vDrop { background: var(--drop); border-color: var(--accent); }
+  .vbar {
+    position: sticky; top: 0; z-index: 20; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center;
+    padding: 10px 12px; background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    margin-bottom: 12px; box-shadow: 0 2px 10px rgba(0,0,0,.08);
+  }
+  .vgroup { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  .vbar button { padding: 6px 10px; font-size: .9rem; }
+  .vbar button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  .vbar .swatch { width: 24px; height: 24px; padding: 0; border-radius: 50%; border: 2px solid var(--border); }
+  .vbar .swatch[aria-pressed="true"] { outline: 2px solid var(--text); outline-offset: 2px; border-color: var(--card); }
+  .vbar select {
+    font: inherit; font-size: .88rem; padding: 5px 6px; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text);
+  }
+  #vZoom { min-width: 4em; text-align: center; font-size: .9rem; font-variant-numeric: tabular-nums; }
+  #vName { font-weight: 600; word-break: break-all; }
+  #vMsg { font-size: .95rem; min-height: 1.5em; margin: 0 0 8px; }
+  #vMsg.error { color: var(--error); }
+  #vMsg.ok { color: var(--ok); }
+  #vPages { display: flex; flex-direction: column; align-items: center; gap: 16px; overflow-x: auto; padding: 4px 0 40px; }
+  .vpage { position: relative; flex: none; background: #fff; box-shadow: 0 1px 5px rgba(0,0,0,.3); user-select: none; -webkit-user-select: none; }
+  .vpage canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .vsvg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+  .vsvg .vsel { pointer-events: none !important; }
+  .vhtml { position: absolute; inset: 0; pointer-events: none; }
+  .vhtml > * { position: absolute; pointer-events: auto; }
+  .tool-highlight .vpage, .tool-pen .vpage { cursor: crosshair; touch-action: none; }
+  .tool-highlight .vhtml > *, .tool-pen .vhtml > * { pointer-events: none; }
+  .tool-text .vpage { cursor: text; }
+  .tool-note .vpage { cursor: copy; }
+  .tool-select .vsvg > rect { pointer-events: visiblePainted; cursor: move; }
+  .tool-select .vsvg > polyline { pointer-events: visibleStroke; cursor: move; }
+  .vtext {
+    font-family: Helvetica, Arial, sans-serif; line-height: 1.2; white-space: pre; min-width: .6em; min-height: 1.2em;
+    user-select: text; -webkit-user-select: text; outline: 1px dashed transparent; cursor: text;
+  }
+  .tool-select .vtext { cursor: move; }
+  .tool-select .vtext, .tool-text .vtext { outline-color: rgba(47, 91, 211, .45); }
+  .vtext:focus { outline: 1px solid #2f5bd3; cursor: text; }
+  .vtext.selected { outline: 2px solid #2f5bd3; }
+  .vnote {
+    width: 24px; height: 24px; border-radius: 6px 6px 6px 0; font-size: 14px; line-height: 24px; text-align: center;
+    cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.4); color: #111;
+  }
+  .vnote.selected { outline: 2px solid #2f5bd3; outline-offset: 2px; }
+  .vpop {
+    z-index: 5; display: grid; gap: 6px; padding: 8px; width: 240px; border-radius: 8px;
+    background: var(--card); border: 1px solid var(--border); box-shadow: 0 6px 20px rgba(0,0,0,.25);
+  }
+  .vpop textarea {
+    width: 100%; height: 90px; resize: vertical; font: inherit; font-size: .9rem; padding: 6px;
+    border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text);
+  }
+  .vpop div { display: flex; gap: 6px; justify-content: flex-end; }
+  .vfield {
+    box-sizing: border-box; margin: 0; padding: 0 2px; border: 1px solid rgba(47, 91, 211, .45); border-radius: 2px;
+    background: rgba(47, 91, 211, .1); color: #000; font-family: Helvetica, Arial, sans-serif; resize: none;
+  }
+  .vfield:focus { outline: 2px solid #2f5bd3; background: rgba(47, 91, 211, .04); }
+  input.vfield[type=checkbox], input.vfield[type=radio] { accent-color: #2f5bd3; }
   footer { color: var(--muted); font-size: .8rem; text-align: center; }
   @media (max-width: 480px) {
     #grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
@@ -160,6 +228,7 @@
   <div class="tabs" role="tablist" aria-label="Outils">
     <button type="button" role="tab" id="tabbtn-pages" data-tab="pages" aria-controls="tab-pages">Pages PDF</button>
     <button type="button" role="tab" id="tabbtn-markdown" data-tab="markdown" aria-controls="tab-markdown">PDF → Markdown</button>
+    <button type="button" role="tab" id="tabbtn-viewer" data-tab="viewer" aria-controls="tab-viewer">Visionneuse</button>
   </div>
 
   <section id="tab-pages" role="tabpanel" aria-labelledby="tabbtn-pages">
@@ -236,6 +305,55 @@
       <span class="btns"><button type="button" class="small" id="mdCopy">Copier</button> <button type="button" class="small primary" id="mdSave">Télécharger le .md</button></span>
     </div>
     <textarea id="mdPreview" readonly aria-labelledby="mdPreviewName"></textarea>
+  </div>
+  </section>
+
+  <section id="tab-viewer" role="tabpanel" aria-labelledby="tabbtn-viewer" hidden>
+  <p class="sub">Lisez, remplissez, surlignez et annotez un PDF, puis téléchargez-le.</p>
+
+  <div class="card" id="vStart">
+    <div id="vDrop" tabindex="0" role="button" aria-label="Ouvrir un PDF dans la visionneuse">
+      <strong>Déposez un PDF ici</strong>
+      <span>ou cliquez pour en choisir un</span>
+    </div>
+  </div>
+  <input type="file" id="vFile" accept="application/pdf,.pdf" hidden>
+
+  <div id="viewer" hidden>
+    <div class="vbar">
+      <div class="vgroup" role="group" aria-label="Outils">
+        <button type="button" data-tool="select" title="Sélectionner, déplacer ou recolorer (Échap)">✋ Sélection</button>
+        <button type="button" data-tool="highlight" title="Surligner : tracez un rectangle sur le passage">🖍 Surligner</button>
+        <button type="button" data-tool="pen" title="Dessiner à main levée">✏️ Dessiner</button>
+        <button type="button" data-tool="text" title="Cliquez sur la page pour écrire">T Texte</button>
+        <button type="button" data-tool="note" title="Cliquez sur la page pour ajouter un commentaire">💬 Note</button>
+      </div>
+      <div class="vgroup" id="vSwatches" role="group" aria-label="Couleur"></div>
+      <select id="vWidth" title="Épaisseur du trait" aria-label="Épaisseur du trait" hidden>
+        <option value="1">Fin</option><option value="2.5" selected>Moyen</option><option value="5">Épais</option>
+      </select>
+      <select id="vSize" title="Taille du texte" aria-label="Taille du texte" hidden>
+        <option>8</option><option>10</option><option selected>12</option><option>14</option><option>18</option><option>24</option><option>32</option>
+      </select>
+      <div class="vgroup">
+        <button type="button" id="vUndo" title="Annuler (Ctrl+Z)">↶ Annuler</button>
+        <button type="button" id="vDelete" title="Supprimer l'élément sélectionné (Suppr)" disabled>🗑 Supprimer</button>
+      </div>
+      <div class="vgroup" role="group" aria-label="Zoom">
+        <button type="button" id="vZoomOut" aria-label="Zoom arrière">−</button>
+        <span id="vZoom">100 %</span>
+        <button type="button" id="vZoomIn" aria-label="Zoom avant">+</button>
+        <button type="button" id="vFit" title="Ajuster à la largeur">Largeur</button>
+      </div>
+      <span id="vPageInfo" class="count"></span>
+      <div class="vgroup" style="margin-left:auto">
+        <span id="vName"></span>
+        <button type="button" id="vOpen">Ouvrir…</button>
+        <button type="button" class="primary" id="vSave">Télécharger</button>
+      </div>
+    </div>
+    <div id="vMsg" role="status"></div>
+    <div id="vPages" class="tool-select"></div>
   </div>
   </section>
 
@@ -502,7 +620,9 @@ document.addEventListener("drop", e => {
   document.body.classList.remove("dragging");
   if (!isFileDrag(e)) return;
   e.preventDefault();
-  if (activeTab() === "markdown") mdAddFiles(e.dataTransfer.files);
+  const tab = activeTab();
+  if (tab === "markdown") mdAddFiles(e.dataTransfer.files);
+  else if (tab === "viewer") viewerOpen(e.dataTransfer.files[0]);
   else addFiles(e.dataTransfer.files);
 });
 
@@ -523,7 +643,8 @@ function showTab(name) {
     t.tabIndex = on ? 0 : -1;
     $("tab-" + t.dataset.tab).hidden = !on;
   });
-  history.replaceState(null, "", name === "markdown" ? "#markdown" : location.pathname + location.search);
+  const hash = { markdown: "#markdown", viewer: "#visionneuse" }[name];
+  history.replaceState(null, "", hash || location.pathname + location.search);
 }
 tabs.forEach(t => t.addEventListener("click", () => showTab(t.dataset.tab)));
 document.querySelector('[role="tablist"]').addEventListener("keydown", e => {
@@ -532,7 +653,7 @@ document.querySelector('[role="tablist"]').addEventListener("keydown", e => {
   const next = tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
   showTab(next.dataset.tab); next.focus();
 });
-showTab(location.hash === "#markdown" ? "markdown" : "pages");
+showTab({ "#markdown": "markdown", "#visionneuse": "viewer" }[location.hash] || "pages");
 
 /* ---------- PDF → Markdown ---------- */
 const mdFiles = [];      // { file, name, state, text, row }
@@ -866,6 +987,662 @@ $("mdReset").addEventListener("click", () => {
   $("mdList").replaceChildren(); $("mdPreviewWrap").hidden = true; mdMsg("");
   mdRefresh();
 });
+
+/* ---------- Visionneuse ---------- */
+// Annotations stockées en coordonnées PDF (points, origine en bas à gauche) :
+//   highlight { rect:[x1,y1,x2,y2] } · ink { points:[[x,y]…], width } · text { x, y (haut), size, text } · note { x, y, text }
+const NS = "http://www.w3.org/2000/svg";
+const V = {
+  doc: null, bytes: null, name: "", pages: [], scale: 1, tool: "select",
+  colors: { highlight: "#ffd400", pen: "#e5322d", text: "#111111", note: "#ffd400" },
+  annots: [], nextId: 1, undo: [], selected: null, dirty: false,
+  fields: new Map(), changedFields: new Set(),
+};
+const PALETTE = ["#ffd400", "#5fd35f", "#ff7eb6", "#4fa3ff", "#e5322d", "#111111"];
+const COLOR_KEY = { highlight: "highlight", ink: "pen", text: "text", note: "note" };
+const ZOOMS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4];
+
+function vMsg(text, kind = "") { $("vMsg").textContent = text; $("vMsg").className = kind; }
+const snapshot = () => JSON.stringify(V.annots);
+const findAnnot = id => V.annots.find(a => a.id === id);
+function pushUndo(before = snapshot()) {
+  V.undo.push(before);
+  if (V.undo.length > 100) V.undo.shift();
+  V.dirty = true;
+}
+function svgEl(tag, attrs) {
+  const n = document.createElementNS(NS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  return n;
+}
+function viewRect(p, [x1, y1, x2, y2]) {
+  const [ax, ay] = p.viewport.convertToViewportPoint(x1, y1);
+  const [bx, by] = p.viewport.convertToViewportPoint(x2, y2);
+  return { x: Math.min(ax, bx), y: Math.min(ay, by), w: Math.abs(bx - ax), h: Math.abs(by - ay) };
+}
+function localPoint(p, ev) {
+  const r = p.el.getBoundingClientRect();
+  return [ev.clientX - r.left, ev.clientY - r.top];
+}
+
+/* Ouverture et affichage */
+const vObserver = new IntersectionObserver(entries => {
+  for (const e of entries) if (e.isIntersecting) renderVPage(V.pages[+e.target.dataset.index]);
+}, { rootMargin: "800px 0px" });
+
+function viewerClose() {
+  V.pages.forEach(p => { vObserver.unobserve(p.el); if (p.task) p.task.cancel(); });
+  if (V.doc) V.doc.destroy();
+  V.pages = []; V.doc = null;
+  $("vPages").replaceChildren();
+}
+
+async function viewerOpen(file) {
+  if (!file) return;
+  if (!/\.pdf$/i.test(file.name) && file.type !== "application/pdf") { vMsg("Ce fichier n'est pas un PDF.", "error"); return; }
+  if (V.dirty && !confirm("Les modifications non téléchargées seront perdues. Ouvrir quand même ?")) return;
+  vMsg("Ouverture…");
+  let doc, bytes;
+  try {
+    bytes = new Uint8Array(await file.arrayBuffer());
+    doc = await pdfjsLib.getDocument({ data: bytes.slice() }).promise;
+  } catch (e) {
+    vMsg("Impossible d'ouvrir le PDF : " + e.message, "error"); return;
+  }
+  viewerClose();
+  Object.assign(V, {
+    doc, bytes, name: file.name.replace(/\.pdf$/i, ""), annots: [], undo: [], selected: null, dirty: false,
+    fields: new Map(), changedFields: new Set(),
+  });
+  let fieldCount = 0;
+  for (let n = 1; n <= doc.numPages; n++) {
+    const page = await doc.getPage(n);
+    const el = document.createElement("div");
+    el.className = "vpage";
+    el.dataset.index = n - 1;
+    el.innerHTML = `<canvas></canvas><svg class="vsvg"></svg><div class="vhtml"></div>`;
+    const p = { page, el, index: n - 1, canvas: el.querySelector("canvas"), svg: el.querySelector("svg"),
+                html: el.querySelector(".vhtml"), rendered: 0, task: null, viewport: null, widgets: [] };
+    try {
+      const anns = await page.getAnnotations();
+      p.widgets = anns.filter(a => a.subtype === "Widget" && a.fieldName && !a.hidden).map(makeWidget).filter(Boolean);
+      fieldCount += p.widgets.length;
+    } catch (e) {}
+    el.addEventListener("pointerdown", ev => onPagePointerDown(ev, p));
+    V.pages.push(p);
+    $("vPages").append(el);
+  }
+  $("vName").textContent = file.name;
+  $("vStart").hidden = true;
+  $("viewer").hidden = false;
+  setTool("select");
+  fitWidth();
+  updatePageInfo();
+  vMsg(fieldCount ? `Ce PDF contient ${new Set(V.pages.flatMap(p => p.widgets.map(w => w.name))).size} champ(s) à remplir, surlignés en bleu.` : "");
+}
+
+function setScale(s) {
+  V.scale = Math.min(4, Math.max(0.25, s));
+  $("vZoom").textContent = Math.round(V.scale * 100) + " %";
+  for (const p of V.pages) {
+    p.viewport = p.page.getViewport({ scale: V.scale });
+    p.el.style.width = p.viewport.width + "px";
+    p.el.style.height = p.viewport.height + "px";
+    redraw(p);
+    p.widgets.forEach(w => placeWidget(p, w));
+    vObserver.unobserve(p.el); vObserver.observe(p.el);
+  }
+}
+
+// Zoom en gardant le même endroit au centre de l'écran
+function zoomTo(s) {
+  const box = $("vPages");
+  const top = box.getBoundingClientRect().top + scrollY;
+  const ratio = (scrollY + innerHeight / 2 - top) / box.scrollHeight;
+  setScale(s);
+  scrollTo(scrollX, top + ratio * box.scrollHeight - innerHeight / 2);
+}
+function fitWidth() {
+  const maxW = Math.max(...V.pages.map(p => p.page.getViewport({ scale: 1 }).width));
+  const avail = $("vPages").clientWidth - 8;
+  setScale(avail > 200 ? Math.min(2, avail / maxW) : 1);
+}
+
+async function renderVPage(p) {
+  if (!p || p.rendered === V.scale) return;
+  const scale = V.scale;
+  if (p.task) { p.task.cancel(); p.task = null; }
+  const vp = p.page.getViewport({ scale: scale * (window.devicePixelRatio || 1) });
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.ceil(vp.width); canvas.height = Math.ceil(vp.height);
+  // Les champs de formulaire ne sont pas peints : on les remplace par de vrais champs HTML
+  const task = p.page.render({ canvasContext: canvas.getContext("2d"), viewport: vp,
+                               annotationMode: pdfjsLib.AnnotationMode.ENABLE_FORMS });
+  p.task = task;
+  try { await task.promise; } catch (e) { return; }
+  if (p.task !== task || V.scale !== scale) return;
+  p.task = null;
+  p.rendered = scale;
+  p.canvas.replaceWith(canvas);
+  p.canvas = canvas;
+}
+
+function updatePageInfo() {
+  if (!V.pages.length) return;
+  let cur = 0;
+  V.pages.forEach((p, i) => { if (p.el.getBoundingClientRect().top < innerHeight / 2) cur = i; });
+  $("vPageInfo").textContent = `Page ${cur + 1} / ${V.pages.length}`;
+}
+
+/* Formulaires */
+function makeWidget(a) {
+  let kind;
+  if (a.fieldType === "Tx") kind = "text";
+  else if (a.fieldType === "Btn" && a.checkBox) kind = "checkbox";
+  else if (a.fieldType === "Btn" && a.radioButton) kind = "radio";
+  else if (a.fieldType === "Ch") kind = "choice";
+  else return null;
+  const name = a.fieldName;
+  if (!V.fields.has(name)) {
+    let value;
+    if (kind === "text") value = a.fieldValue || "";
+    else if (kind === "checkbox") value = !!a.fieldValue && a.fieldValue !== "Off";
+    else if (kind === "radio") value = a.fieldValue && a.fieldValue !== "Off" ? a.fieldValue : "";
+    else value = Array.isArray(a.fieldValue) ? (a.fieldValue[0] || "") : (a.fieldValue || "");
+    V.fields.set(name, { kind, value });
+  }
+  return {
+    name, kind, rect: a.rect, multiline: !!a.multiLine, readOnly: !!a.readOnly, maxLen: a.maxLen || 0,
+    exportValue: a.buttonValue, options: a.options || [], combo: !!a.combo,
+    fontSize: (a.defaultAppearanceData && a.defaultAppearanceData.fontSize) || 0, el: null,
+  };
+}
+
+function syncField(name, from) {
+  const f = V.fields.get(name);
+  V.changedFields.add(name);
+  V.dirty = true;
+  for (const p of V.pages) for (const w of p.widgets) {
+    if (w.name !== name || !w.el || w.el === from) continue;
+    if (w.kind === "checkbox") w.el.checked = f.value;
+    else if (w.kind === "radio") w.el.checked = f.value === w.exportValue;
+    else w.el.value = f.value;
+  }
+}
+
+function placeWidget(p, w) {
+  const f = V.fields.get(w.name);
+  if (!w.el) {
+    let el;
+    if (w.kind === "text") {
+      el = document.createElement(w.multiline ? "textarea" : "input");
+      if (!w.multiline) el.type = "text";
+      el.value = f.value;
+      if (w.maxLen) el.maxLength = w.maxLen;
+      el.addEventListener("input", () => { f.value = el.value; syncField(w.name, el); });
+    } else if (w.kind === "checkbox" || w.kind === "radio") {
+      el = document.createElement("input");
+      el.type = w.kind;
+      if (w.kind === "radio") el.name = "vradio_" + w.name;
+      el.checked = w.kind === "checkbox" ? f.value : f.value === w.exportValue;
+      el.addEventListener("change", () => {
+        f.value = w.kind === "checkbox" ? el.checked : w.exportValue;
+        syncField(w.name, el);
+      });
+    } else {
+      el = document.createElement("select");
+      if (!w.options.some(o => o.exportValue === f.value)) el.append(new Option("", ""));
+      w.options.forEach(o => el.append(new Option(o.displayValue, o.exportValue)));
+      el.value = f.value;
+      el.addEventListener("change", () => { f.value = el.value; syncField(w.name, el); });
+    }
+    el.className = "vfield";
+    el.title = w.name;
+    el.disabled = w.readOnly;
+    el.setAttribute("aria-label", w.name);
+    w.el = el;
+    p.html.append(el);
+  }
+  const r = viewRect(p, w.rect);
+  const hPt = Math.abs(w.rect[3] - w.rect[1]);
+  const size = (w.fontSize || Math.min(12, Math.max(6, hPt * (w.multiline ? 0.5 : 0.7)))) * V.scale;
+  Object.assign(w.el.style, { left: r.x + "px", top: r.y + "px", width: r.w + "px", height: r.h + "px", fontSize: size + "px" });
+}
+
+/* Dessin des annotations */
+function redraw(p) {
+  if (!p.viewport) return;
+  p.svg.replaceChildren();
+  p.html.querySelectorAll(".vtext, .vnote").forEach(n => n.remove());
+  for (const a of V.annots) if (a.page === p.index) drawAnnot(p, a);
+  updateSelection();
+}
+
+function drawAnnot(p, a) {
+  if (a.type === "highlight") {
+    const r = viewRect(p, a.rect);
+    const n = svgEl("rect", { x: r.x, y: r.y, width: r.w, height: r.h, fill: a.color, "fill-opacity": 0.4, style: "mix-blend-mode:multiply" });
+    n.dataset.id = a.id; p.svg.append(n);
+  } else if (a.type === "ink") {
+    const pts = a.points.map(([x, y]) => p.viewport.convertToViewportPoint(x, y).map(v => v.toFixed(1)).join(",")).join(" ");
+    const n = svgEl("polyline", { points: pts, fill: "none", stroke: a.color, "stroke-width": a.width * V.scale,
+                                  "stroke-linecap": "round", "stroke-linejoin": "round" });
+    n.dataset.id = a.id; p.svg.append(n);
+  } else if (a.type === "text") {
+    p.html.append(textBox(p, a));
+  } else if (a.type === "note") {
+    const n = document.createElement("div");
+    n.className = "vnote";
+    n.dataset.id = a.id;
+    n.textContent = "💬";
+    n.title = a.text || "Note";
+    n.style.background = a.color;
+    const [x, y] = p.viewport.convertToViewportPoint(a.x, a.y);
+    Object.assign(n.style, { left: x + "px", top: y + "px" });
+    p.html.append(n);
+  }
+}
+
+function textBox(p, a) {
+  const el = document.createElement("div");
+  el.className = "vtext";
+  el.dataset.id = a.id;
+  try { el.contentEditable = "plaintext-only"; } catch (e) { el.contentEditable = "true"; }
+  el.spellcheck = false;
+  el.textContent = a.text;
+  const [x, y] = p.viewport.convertToViewportPoint(a.x, a.y);
+  Object.assign(el.style, { left: x + "px", top: y + "px", fontSize: a.size * V.scale + "px", color: a.color });
+  el.addEventListener("focus", () => { if (el._before === undefined) el._before = snapshot(); });
+  el.addEventListener("input", () => { a.text = el.innerText.replace(/\n$/, ""); V.dirty = true; });
+  el.addEventListener("blur", () => {
+    const before = el._before;
+    el._before = undefined;
+    if (!a.text.trim()) {
+      V.annots = V.annots.filter(x => x !== a);
+      if (V.selected === a) select(null);
+      el.remove();
+    } else if (before !== undefined && before !== snapshot()) pushUndo(before);
+  });
+  el.addEventListener("dblclick", () => el.focus());
+  return el;
+}
+
+function select(a) {
+  V.selected = a;
+  $("vDelete").disabled = !a;
+  updateSelection();
+  renderSwatches();
+}
+
+function updateSelection() {
+  document.querySelectorAll("#vPages .vsel").forEach(n => n.remove());
+  document.querySelectorAll("#vPages .selected").forEach(n => n.classList.remove("selected"));
+  const a = V.selected;
+  const p = a && V.pages[a.page];
+  const node = p && p.el.querySelector(`[data-id="${a.id}"]`);
+  if (!node) return;
+  if (node instanceof SVGElement) {
+    const bb = node.getBBox(), pad = 4;
+    p.svg.append(svgEl("rect", { class: "vsel", x: bb.x - pad, y: bb.y - pad, width: bb.width + 2 * pad, height: bb.height + 2 * pad,
+                                 fill: "none", stroke: "#2f5bd3", "stroke-width": 1.5, "stroke-dasharray": "5 3" }));
+  } else node.classList.add("selected");
+}
+
+/* Outils */
+function setTool(t) {
+  V.tool = t;
+  document.querySelectorAll("[data-tool]").forEach(b => b.setAttribute("aria-pressed", b.dataset.tool === t));
+  $("vPages").className = "tool-" + t;
+  $("vWidth").hidden = t !== "pen";
+  $("vSize").hidden = t !== "text";
+  if (t !== "select") select(null);
+  closeNotePopup();
+  renderSwatches();
+}
+
+function renderSwatches() {
+  const key = V.tool === "select" ? (V.selected && COLOR_KEY[V.selected.type]) : V.tool;
+  const box = $("vSwatches");
+  box.replaceChildren();
+  if (!key) return;
+  const current = V.tool === "select" ? V.selected.color : V.colors[key];
+  PALETTE.forEach(c => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "swatch"; b.style.background = c;
+    b.setAttribute("aria-label", "Couleur " + c);
+    b.setAttribute("aria-pressed", c === current);
+    b.addEventListener("click", () => {
+      V.colors[key] = c;
+      if (V.tool === "select" && V.selected) {
+        pushUndo(); V.selected.color = c; redraw(V.pages[V.selected.page]);
+      }
+      renderSwatches();
+    });
+    box.append(b);
+  });
+}
+
+function addAnnotation(a, before = snapshot()) {
+  a.id = V.nextId++;
+  V.annots.push(a);
+  pushUndo(before);
+  redraw(V.pages[a.page]);
+  return a;
+}
+
+function deleteSelected() {
+  const a = V.selected;
+  if (!a) return;
+  pushUndo();
+  V.annots = V.annots.filter(x => x !== a);
+  closeNotePopup();
+  select(null);
+  redraw(V.pages[a.page]);
+}
+
+function undo() {
+  if (!V.undo.length) { vMsg("Rien à annuler."); return; }
+  V.annots = JSON.parse(V.undo.pop());
+  V.dirty = true;
+  closeNotePopup();
+  select(null);
+  V.pages.forEach(redraw);
+}
+
+function translateAnnot(a, orig, dx, dy) {
+  if (a.type === "highlight") a.rect = [orig.rect[0] + dx, orig.rect[1] + dy, orig.rect[2] + dx, orig.rect[3] + dy];
+  else if (a.type === "ink") a.points = orig.points.map(([x, y]) => [x + dx, y + dy]);
+  else { a.x = orig.x + dx; a.y = orig.y + dy; }
+}
+
+function startMove(e, p, a) {
+  const sx = e.clientX, sy = e.clientY;
+  const before = snapshot();
+  const orig = JSON.parse(JSON.stringify(a));
+  const [ox, oy] = p.viewport.convertToPdfPoint(0, 0);
+  let moved = false;
+  const move = ev => {
+    if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 3) return;
+    moved = true;
+    const [px, py] = p.viewport.convertToPdfPoint(ev.clientX - sx, ev.clientY - sy);
+    translateAnnot(a, orig, px - ox, py - oy);
+    redraw(p);
+  };
+  const up = () => {
+    removeEventListener("pointermove", move);
+    removeEventListener("pointerup", up);
+    if (moved) pushUndo(before);
+    else if (a.type === "note") openNotePopup(p, a, false);
+  };
+  addEventListener("pointermove", move);
+  addEventListener("pointerup", up);
+}
+
+function onPagePointerDown(e, p) {
+  if (e.button !== 0) return;
+  if (e.target.closest(".vfield, .vpop")) return;
+  const hit = e.target.closest("[data-id]");
+  const hitAnnot = hit && findAnnot(+hit.dataset.id);
+  const tool = V.tool;
+
+  if (tool === "select") {
+    if (!hitAnnot) { select(null); closeNotePopup(); return; }
+    if (hitAnnot.type === "text" && document.activeElement === hit) return;  // édition en cours
+    e.preventDefault();
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    closeNotePopup();
+    select(hitAnnot);
+    startMove(e, p, hitAnnot);
+    return;
+  }
+
+  if (tool === "text") {
+    if (hitAnnot && hitAnnot.type === "text") return;  // clic dans une zone existante : on y écrit
+    e.preventDefault();
+    const before = snapshot();
+    const size = +$("vSize").value;
+    const [x, y] = p.viewport.convertToPdfPoint(...localPoint(p, e));
+    const a = addAnnotation({ type: "text", page: p.index, x, y: y + size * 0.6, size, color: V.colors.text, text: "" }, before);
+    V.undo.pop();  // l'annulation n'est enregistrée qu'une fois du texte saisi
+    const el = p.html.querySelector(`[data-id="${a.id}"]`);
+    el._before = before;
+    setTimeout(() => el.focus(), 0);
+    return;
+  }
+
+  if (tool === "note") {
+    e.preventDefault();
+    if (hitAnnot && hitAnnot.type === "note") { openNotePopup(p, hitAnnot, false); return; }
+    const [lx, ly] = localPoint(p, e);
+    const [x, y] = p.viewport.convertToPdfPoint(lx - 12, ly - 12);
+    const a = addAnnotation({ type: "note", page: p.index, x, y, color: V.colors.note, text: "" });
+    openNotePopup(p, a, true);
+    return;
+  }
+
+  // Surligner ou dessiner : tracé à la souris, au stylet ou au doigt
+  e.preventDefault();
+  try { p.el.setPointerCapture(e.pointerId); } catch (err) {}
+  const start = localPoint(p, e);
+  const color = V.colors[tool];
+  let temp, pts = [start];
+  if (tool === "highlight") {
+    temp = svgEl("rect", { fill: color, "fill-opacity": 0.4, style: "mix-blend-mode:multiply" });
+  } else {
+    temp = svgEl("polyline", { fill: "none", stroke: color, "stroke-width": +$("vWidth").value * V.scale,
+                               "stroke-linecap": "round", "stroke-linejoin": "round" });
+  }
+  p.svg.append(temp);
+  const move = ev => {
+    const evs = ev.getCoalescedEvents ? ev.getCoalescedEvents() : [ev];
+    for (const ce of (evs.length ? evs : [ev])) {
+      const pt = localPoint(p, ce);
+      if (tool === "highlight") {
+        Object.entries({ x: Math.min(start[0], pt[0]), y: Math.min(start[1], pt[1]),
+                         width: Math.abs(pt[0] - start[0]), height: Math.abs(pt[1] - start[1]) })
+          .forEach(([k, v]) => temp.setAttribute(k, v));
+        pts[1] = pt;
+      } else {
+        const last = pts[pts.length - 1];
+        if (Math.hypot(pt[0] - last[0], pt[1] - last[1]) >= 1.5) pts.push(pt);
+      }
+    }
+    if (tool === "pen") temp.setAttribute("points", pts.map(q => q.join(",")).join(" "));
+  };
+  const up = () => {
+    p.el.removeEventListener("pointermove", move);
+    p.el.removeEventListener("pointerup", up);
+    p.el.removeEventListener("pointercancel", up);
+    temp.remove();
+    if (tool === "highlight") {
+      const end = pts[1];
+      if (!end || Math.abs(end[0] - start[0]) < 4 || Math.abs(end[1] - start[1]) < 4) return;
+      const [x1, y1] = p.viewport.convertToPdfPoint(...start);
+      const [x2, y2] = p.viewport.convertToPdfPoint(...end);
+      addAnnotation({ type: "highlight", page: p.index, color,
+                      rect: [Math.min(x1, x2), Math.min(y1, y2), Math.max(x1, x2), Math.max(y1, y2)] });
+    } else if (pts.length > 1) {
+      addAnnotation({ type: "ink", page: p.index, color, width: +$("vWidth").value,
+                      points: pts.map(q => p.viewport.convertToPdfPoint(...q)) });
+    }
+  };
+  p.el.addEventListener("pointermove", move);
+  p.el.addEventListener("pointerup", up);
+  p.el.addEventListener("pointercancel", up);
+}
+
+/* Notes */
+let notePopup = null;
+function closeNotePopup(remove = false) {
+  if (!notePopup) return;
+  const { el, a, isNew, before } = notePopup;
+  notePopup = null;
+  el.remove();
+  if (remove || !a.text.trim()) {
+    V.annots = V.annots.filter(x => x !== a);
+    if (isNew) V.undo.pop();          // note jamais remplie : rien à annuler
+    else pushUndo(before);
+    if (V.selected === a) select(null);
+  } else if (!isNew && before !== snapshot()) pushUndo(before);
+  const p = V.pages[a.page];
+  if (p) redraw(p);
+}
+function openNotePopup(p, a, isNew) {
+  closeNotePopup();
+  const el = document.createElement("div");
+  el.className = "vpop";
+  el.innerHTML = `<textarea placeholder="Votre commentaire…" aria-label="Commentaire"></textarea>
+    <div><button type="button" class="small" data-act="del">Supprimer</button><button type="button" class="small primary" data-act="ok">OK</button></div>`;
+  const ta = el.querySelector("textarea");
+  ta.value = a.text;
+  ta.addEventListener("input", () => { a.text = ta.value; V.dirty = true; });
+  ta.addEventListener("keydown", ev => { if (ev.key === "Escape") closeNotePopup(); });
+  ta.addEventListener("keydown", ev => { if (ev.key === "Enter" && (ev.ctrlKey || ev.metaKey)) closeNotePopup(); });
+  el.querySelector('[data-act="ok"]').addEventListener("click", () => closeNotePopup());
+  el.querySelector('[data-act="del"]').addEventListener("click", () => closeNotePopup(true));
+  const [x, y] = p.viewport.convertToViewportPoint(a.x, a.y);
+  const left = Math.min(x + 30, p.viewport.width - 250);
+  const top = Math.min(y, p.viewport.height - 150);
+  Object.assign(el.style, { left: Math.max(0, left) + "px", top: Math.max(0, top) + "px" });
+  p.html.append(el);
+  notePopup = { el, a, isNew, before: snapshot() };
+  setTimeout(() => ta.focus(), 0);
+}
+
+/* Enregistrement */
+async function viewerSave() {
+  if (!V.doc) return;
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  closeNotePopup();
+  $("vSave").disabled = true;
+  vMsg("Préparation…");
+  try {
+    const { PDFName, PDFArray, PDFHexString, PDFString, PDFBool, StandardFonts } = PDFLib;
+    const out = await PDFDocument.load(V.bytes, { ignoreEncryption: true });
+    const ctx = out.context;
+    const failed = [];
+
+    if (V.changedFields.size) {
+      const form = out.getForm();
+      for (const name of V.changedFields) {
+        const f = V.fields.get(name);
+        try {
+          const field = form.getField(name);
+          if (f.kind === "text") field.setText(f.value);
+          else if (f.kind === "checkbox") f.value ? field.check() : field.uncheck();
+          else if (f.value) field.select(f.value);
+        } catch (e) { failed.push(name); }
+      }
+    }
+
+    const font = await out.embedFont(StandardFonts.Helvetica);
+    const allowed = new Set(font.getCharacterSet());
+    const safe = s => [...s].map(c => allowed.has(c.codePointAt(0)) ? c : "?").join("");
+    const n3 = v => +v.toFixed(3);
+    const rgbOf = c => [1, 3, 5].map(i => n3(parseInt(c.slice(i, i + 2), 16) / 255));
+    const pages = out.getPages();
+    const attach = (page, dict) => {
+      const ref = ctx.register(ctx.obj(dict));
+      const annots = page.node.lookupMaybe(PDFName.of("Annots"), PDFArray);
+      if (annots) annots.push(ref);
+      else page.node.set(PDFName.of("Annots"), ctx.obj([ref]));
+    };
+
+    for (const a of V.annots) {
+      const page = pages[a.page];
+      if (!page) continue;
+      const [r, g, b] = rgbOf(a.color);
+      const common = { Type: "Annot", C: [r, g, b], M: PDFString.fromDate(new Date()), NM: PDFHexString.fromText(`outils-pdf-${a.id}`) };
+      if (a.type === "highlight") {
+        const [x1, y1, x2, y2] = a.rect.map(n3);
+        const w = n3(x2 - x1), h = n3(y2 - y1);
+        const ap = ctx.register(ctx.stream(`/GS0 gs ${r} ${g} ${b} rg 0 0 ${w} ${h} re f`, {
+          Type: "XObject", Subtype: "Form", BBox: [0, 0, w, h],
+          Resources: { ExtGState: { GS0: { Type: "ExtGState", BM: "Multiply", ca: 0.4, CA: 0.4 } } },
+        }));
+        attach(page, { ...common, Subtype: "Highlight", F: 4, Rect: [x1, y1, x2, y2],
+                       QuadPoints: [x1, y2, x2, y2, x1, y1, x2, y1], CA: 0.4, AP: { N: ap } });
+      } else if (a.type === "ink") {
+        const pad = a.width;
+        const xs = a.points.map(q => q[0]), ys = a.points.map(q => q[1]);
+        const minX = Math.min(...xs) - pad, minY = Math.min(...ys) - pad;
+        const maxX = Math.max(...xs) + pad, maxY = Math.max(...ys) + pad;
+        const path = a.points.map(([x, y], i) => `${n3(x - minX)} ${n3(y - minY)} ${i ? "l" : "m"}`).join(" ");
+        const ap = ctx.register(ctx.stream(`${r} ${g} ${b} RG ${a.width} w 1 J 1 j ${path} S`, {
+          Type: "XObject", Subtype: "Form", BBox: [0, 0, n3(maxX - minX), n3(maxY - minY)],
+        }));
+        attach(page, { ...common, Subtype: "Ink", F: 4, Rect: [minX, minY, maxX, maxY].map(n3),
+                       InkList: [a.points.flat().map(n3)], BS: { W: a.width }, AP: { N: ap } });
+      } else if (a.type === "note") {
+        attach(page, { ...common, Subtype: "Text", F: 28, Rect: [a.x, a.y - 20, a.x + 20, a.y].map(n3),
+                       Contents: PDFHexString.fromText(a.text), Name: "Comment", Open: false });
+      } else if (a.type === "text") {
+        // Le texte ajouté est inscrit dans la page, comme sur un formulaire papier
+        a.text.split("\n").forEach((line, i) => {
+          if (line) page.drawText(safe(line), { x: a.x, y: a.y - a.size * (0.95 + 1.2 * i), size: a.size, font,
+                                                color: PDFLib.rgb(r, g, b) });
+        });
+      }
+    }
+
+    let bytes;
+    try {
+      bytes = await out.save();
+    } catch (e) {
+      // Caractères non pris en charge par la police d'un champ : on laisse le lecteur PDF dessiner les champs
+      out.getForm().acroForm.dict.set(PDFName.of("NeedAppearances"), PDFBool.True);
+      bytes = await out.save({ updateFieldAppearances: false });
+    }
+    const saved = await saveBlob(new Blob([bytes], { type: "application/pdf" }), `${V.name}_annoté.pdf`, "application/pdf", "pdf");
+    if (saved) {
+      V.dirty = false;
+      vMsg(`Enregistré : ${saved}` + (failed.length ? ` · champs non enregistrés : ${failed.join(", ")}` : ""), failed.length ? "error" : "ok");
+    } else vMsg("Enregistrement annulé.");
+  } catch (e) {
+    vMsg("Erreur : " + e.message, "error");
+  } finally {
+    $("vSave").disabled = false;
+  }
+}
+
+/* Branchements */
+const vPick = () => $("vFile").click();
+$("vDrop").addEventListener("click", vPick);
+$("vDrop").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); vPick(); } });
+$("vOpen").addEventListener("click", vPick);
+$("vFile").addEventListener("change", e => { viewerOpen(e.target.files[0]); e.target.value = ""; });
+document.querySelectorAll("[data-tool]").forEach(b => b.addEventListener("click", () => setTool(b.dataset.tool)));
+$("vUndo").addEventListener("click", undo);
+$("vDelete").addEventListener("click", deleteSelected);
+$("vZoomIn").addEventListener("click", () => zoomTo(ZOOMS.find(z => z > V.scale + 0.01) || 4));
+$("vZoomOut").addEventListener("click", () => zoomTo([...ZOOMS].reverse().find(z => z < V.scale - 0.01) || 0.25));
+$("vFit").addEventListener("click", fitWidth);
+$("vSave").addEventListener("click", viewerSave);
+$("vPages").addEventListener("wheel", e => {
+  if (!e.ctrlKey || !V.pages.length) return;
+  e.preventDefault();
+  zoomTo(V.scale * (e.deltaY < 0 ? 1.1 : 1 / 1.1));
+}, { passive: false });
+let vScrollTimer;
+addEventListener("scroll", () => {
+  if (activeTab() !== "viewer") return;
+  clearTimeout(vScrollTimer);
+  vScrollTimer = setTimeout(updatePageInfo, 80);
+}, { passive: true });
+document.addEventListener("keydown", e => {
+  if (activeTab() !== "viewer" || !V.pages.length) return;
+  const t = e.target;
+  const editing = t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName);
+  if (e.key === "Escape") {
+    if (editing) t.blur();
+    else { select(null); setTool("select"); }
+    return;
+  }
+  if (editing) return;
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); undo(); }
+  else if ((e.key === "Delete" || e.key === "Backspace") && V.selected) { e.preventDefault(); deleteSelected(); }
+});
+addEventListener("beforeunload", e => { if (V.dirty) { e.preventDefault(); e.returnValue = ""; } });
 </script>
 </body>
 </html>

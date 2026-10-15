@@ -11,6 +11,8 @@ Petit outil Windows pour extraire des pages d'un PDF : on dépose le fichier sur
 - export en un seul PDF ou un PDF par page (.zip) ;
 - onglet **PDF → Markdown** : convertit un ou plusieurs PDF en `.md` (titres, paragraphes, listes, gras ; en-têtes, pieds et numéros de page retirés), avec OCR automatique (français, anglais) des pages scannées. Inspiré du convertisseur du dashboard du Pi, mais tout se fait dans le navigateur.
 
+- onglet **Visionneuse** : lire un PDF, zoomer, remplir ses champs de formulaire, surligner, dessiner, ajouter du texte ou des notes, annuler, puis télécharger le PDF annoté. Surlignages, dessins et notes sont enregistrés comme de vraies annotations (modifiables dans Acrobat) ; le texte ajouté est inscrit dans la page.
+
 Les fichiers ne quittent pas l'ordinateur (pdf-lib, pdf.js, SortableJS, JSZip, Tesseract.js). Publiée avec GitHub Pages : https://jgrewis.github.io/extraire-pages-pdf/
 
 ## Installation
