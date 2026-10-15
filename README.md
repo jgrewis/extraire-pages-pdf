@@ -2,6 +2,10 @@
 
 Petit outil Windows pour extraire des pages d'un PDF : on dépose le fichier sur le script, une fenêtre demande les pages, puis où enregistrer.
 
+## Version web
+
+[`index.html`](index.html) fait la même chose dans le navigateur (pdf-lib, JSZip), sans rien installer. Le PDF ne quitte pas l'ordinateur. Elle est publiée avec GitHub Pages.
+
 ## Installation
 
 ```bash
