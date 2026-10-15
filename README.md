@@ -4,14 +4,15 @@ Petit outil Windows pour extraire des pages d'un PDF : on dépose le fichier sur
 
 ## Version web
 
-[`index.html`](index.html) fonctionne dans le navigateur, sans rien installer, et va plus loin que le script :
+[`index.html`](index.html) fonctionne dans le navigateur, sans rien installer, et va plus loin que le script. L'accueil mène à quatre outils séparés :
 
-- aperçu des pages en vignettes, à glisser pour changer l'ordre et à cliquer pour garder ou écarter une page ;
-- fusion : on dépose plusieurs PDF, toutes leurs pages arrivent dans la même grille ;
-- export en un seul PDF ou un PDF par page (.zip) ;
-- onglet **PDF → Markdown** : convertit un ou plusieurs PDF en `.md` (titres, paragraphes, listes, gras ; en-têtes, pieds et numéros de page retirés), avec OCR automatique (français, anglais) des pages scannées. Inspiré du convertisseur du dashboard du Pi, mais tout se fait dans le navigateur.
+- **Extraire des pages** (`#extraire`) : un PDF, aperçu des pages en vignettes, à cliquer pour garder ou écarter une page et à glisser pour changer l'ordre ; la saisie (`1-3, 5`, `4-2`…) place les pages dans l'ordre tapé ; export en un seul PDF ou un PDF par page (.zip) ;
+- **Fusionner des PDF** (`#fusionner`) : plusieurs PDF, à réordonner par la poignée de chaque fichier, assemblés en un seul `fusion.pdf` ;
+- **PDF → Markdown** (`#markdown`) : convertit un ou plusieurs PDF en `.md` (titres, paragraphes, listes, gras ; en-têtes, pieds et numéros de page retirés), avec OCR automatique (français, anglais) des pages scannées. Inspiré du convertisseur du dashboard du Pi, mais tout se fait dans le navigateur.
 
-- onglet **Visionneuse** : lire un PDF, zoomer, remplir ses champs de formulaire, surligner, dessiner, ajouter du texte ou des notes, annuler, puis télécharger le PDF annoté. Surlignages, dessins et notes sont enregistrés comme de vraies annotations (modifiables dans Acrobat) ; le texte ajouté est inscrit dans la page.
+- **Visionneuse** (`#visionneuse`) : lire un PDF, zoomer, remplir ses champs de formulaire, surligner, dessiner, ajouter du texte ou des notes, annuler, puis télécharger le PDF annoté. Surlignages, dessins et notes sont enregistrés comme de vraies annotations (modifiables dans Acrobat) ; le texte ajouté est inscrit dans la page.
+
+L'habillage suit la charte « Outils PDF » (crème, vert forêt, ocre, sauge, sable ; DM Serif Display et Jost ; thèmes clair et sombre). Ses variables sont dans [`tokens.css`](tokens.css) : chaque outil garde sa couleur sur sa tuile, sa page et sa zone de dépôt.
 
 Les fichiers ne quittent pas l'ordinateur (pdf-lib, pdf.js, SortableJS, JSZip, Tesseract.js). Publiée avec GitHub Pages : https://jgrewis.github.io/extraire-pages-pdf/
 

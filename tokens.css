@@ -1,0 +1,114 @@
+/* Charte outils PDF : variables CSS générées depuis tokens.json */
+@import url("https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Jost:wght@400;500;600&display=swap");
+
+:root, [data-theme="light"] {
+  --bg-canvas: #e7e0d6;
+  --bg-page: #f3ede4;
+  --bg-card: #fbf8f3;
+  --bg-sunken: #eae2d6;
+  --line: #d6ccbd;
+  --line-strong: #857b6c;
+  --ink: #1e2b28;
+  --ink-muted: #56605c;
+  --brand: #1f4a44;
+  --on-brand: #ffffff;
+  --accent: #c49a5c;
+  --on-accent: #1e2b28;
+  --accent-text: #8a6430;
+  --sage: #8e9c88;
+  --sand: #ddd3c4;
+  --sun: #e6c68e;
+  --tool-extract: var(--brand);
+  --on-tool-extract: #ffffff;
+  --tool-merge: var(--accent);
+  --tool-markdown: var(--sage);
+  --tool-viewer: var(--sand);
+  --success: #2f6b4f;
+  --danger: #a23b2a;
+  --focus: var(--accent-text);
+  --shadow-card: 0 1px 2px rgba(30,43,40,0.06), 0 8px 24px rgba(30,43,40,0.06);
+  --shadow-lift: 0 12px 32px rgba(30,43,40,0.14);
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-24: 96px;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 24px;
+  --radius-full: 999px;
+  --font-display: "DM Serif Display", Georgia, serif;
+  --font-sans: "Jost", "Avenir Next", system-ui, sans-serif;
+}
+
+[data-theme="dark"] {
+  --bg-canvas: #0f1413;
+  --bg-page: #151c1a;
+  --bg-card: #1c2522;
+  --bg-sunken: #111816;
+  --line: #2c3734;
+  --line-strong: #6e7a75;
+  --ink: #efe8dd;
+  --ink-muted: #a9b2ad;
+  --brand: #7fb3a7;
+  --on-brand: #151c1a;
+  --accent: #d4ab6e;
+  --on-accent: #151c1a;
+  --accent-text: #d4ab6e;
+  --sage: #8e9c88;
+  --sand: #3a4541;
+  --sun: #b8955a;
+  --tool-extract: #2e6159;
+  --on-tool-extract: #ffffff;
+  --tool-merge: var(--accent);
+  --tool-markdown: var(--sage);
+  --tool-viewer: var(--sand);
+  --success: #7fc4a0;
+  --danger: #e58a78;
+  --focus: var(--accent);
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.4), 0 8px 24px rgba(0,0,0,0.3);
+  --shadow-lift: 0 12px 32px rgba(0,0,0,0.5);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg-canvas: #0f1413;
+    --bg-page: #151c1a;
+    --bg-card: #1c2522;
+    --bg-sunken: #111816;
+    --line: #2c3734;
+    --line-strong: #6e7a75;
+    --ink: #efe8dd;
+    --ink-muted: #a9b2ad;
+    --brand: #7fb3a7;
+    --on-brand: #151c1a;
+    --accent: #d4ab6e;
+    --on-accent: #151c1a;
+    --accent-text: #d4ab6e;
+    --sage: #8e9c88;
+    --sand: #3a4541;
+    --sun: #b8955a;
+    --tool-extract: #2e6159;
+    --on-tool-extract: #ffffff;
+    --tool-merge: var(--accent);
+    --tool-markdown: var(--sage);
+    --tool-viewer: var(--sand);
+    --success: #7fc4a0;
+    --danger: #e58a78;
+    --focus: var(--accent);
+  }
+}
+
+.display { font-family: var(--font-display); font-size: 56px; line-height: 60px; font-weight: 400; letter-spacing: -0.01em; }
+.h1 { font-family: var(--font-display); font-size: 40px; line-height: 46px; font-weight: 400; }
+.h2 { font-family: var(--font-display); font-size: 28px; line-height: 34px; font-weight: 400; }
+.h3 { font-family: var(--font-sans); font-size: 20px; line-height: 28px; font-weight: 500; }
+.lead { font-family: var(--font-sans); font-size: 18px; line-height: 28px; font-weight: 400; }
+.body { font-family: var(--font-sans); font-size: 16px; line-height: 26px; font-weight: 400; }
+.small { font-family: var(--font-sans); font-size: 14px; line-height: 20px; font-weight: 400; }
+.label { font-family: var(--font-sans); font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; }
+.button { font-family: var(--font-sans); font-size: 15px; line-height: 20px; font-weight: 500; }
