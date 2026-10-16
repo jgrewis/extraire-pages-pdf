@@ -670,8 +670,10 @@ function stripExif(b) {
 // Une image n'est remplacée que si elle gagne au moins 10 % ; le reste du PDF (texte, liens, formulaires) n'est pas touché.
 async function lightenPdf(it, step) {
   let doc;
-  try { doc = await PDFDocument.load(it.bytes, { updateMetadata: false }); }
-  catch (e) { throw new Error(e instanceof PDFLib.EncryptedPDFError ? "PDF protégé, impossible de l'alléger" : "PDF illisible"); }
+  try { doc = await PDFDocument.load(it.bytes, { updateMetadata: false, ignoreEncryption: true }); }
+  catch (e) { throw new Error("PDF illisible"); }
+  // Flux chiffrés : impossibles à décoder et à réécrire sans casser le fichier
+  if (doc.isEncrypted) throw new Error("PDF protégé, impossible de l'alléger");
   const ctx = doc.context, N = n => PDFLib.PDFName.of(n);
   const num = v => (v instanceof PDFLib.PDFNumber ? v.asNumber() : NaN);
   const okSpace = cs => {
