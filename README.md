@@ -18,6 +18,15 @@ L'habillage suit la charte « Outils PDF » (crème, vert forêt, ocre, sauge, s
 
 Les fichiers ne quittent pas l'ordinateur (pdf-lib, pdf.js, SortableJS, JSZip, Tesseract.js). Publiée avec GitHub Pages : https://jgrewis.github.io/extraire-pages-pdf/
 
+### Sécurité
+
+- **PDF piégé** : toutes les ouvertures de PDF passent par `openPdf()` dans [`app.js`](app.js), avec `isEvalSupported: false`. C'est le correctif officiel de la faille pdf.js CVE-2024-4367 pour la version 3.11.174 : un PDF malveillant ne peut pas exécuter de code dans la page.
+- **Intégrité des bibliothèques (SRI)** : les quatre bibliothèques chargées dans `index.html` portent une empreinte `integrity`, vérifiée auprès des registres cdnjs et jsDelivr. Le worker pdf.js, le script Tesseract et son worker sont téléchargés avec contrôle d'intégrité (`verifiedScriptUrl()`), puis lancés depuis une URL `blob:`. Un fichier modifié sur le CDN est refusé.
+- **Content-Security-Policy** (balise `<meta>` dans `index.html`) : pas de script écrit dans la page ni d'`eval` (`'unsafe-inline'` et `'unsafe-eval'` absents de `script-src`) ; scripts limités aux versions exactes des bibliothèques sur cdnjs et jsDelivr ; envois réseau (`connect-src`) limités aux fichiers de pdf.js et de l'OCR ; `object-src 'none'`, `base-uri 'none'`, `form-action 'none'`. Les fichiers ouverts ne peuvent donc pas être envoyés vers un autre site.
+- Exceptions assumées : `'wasm-unsafe-eval'` (WebAssembly de l'OCR, n'autorise pas `eval` JavaScript), `data:` dans `connect-src` (le worker OCR lit son WebAssembly ainsi), styles en ligne (`style-src 'unsafe-inline'`, sans exécution de code).
+- Limites : le noyau OCR (`tesseract.js-core`, épinglé en 5.1.1) et les données de langue sont chargés par le worker Tesseract lui-même, sans empreinte SRI ; la CSP les restreint à jsDelivr. GitHub Pages ne permet pas de régler les en-têtes HTTP (HSTS, `frame-ancestors`…).
+- Le code de la page est dans [`app.js`](app.js) : toute modification se fait là, jamais dans un `<script>` en ligne (la CSP le bloquerait). Pour changer de version d'une bibliothèque, mettre à jour l'URL, l'empreinte `integrity` et la CSP ensemble.
+
 ## Installation
 
 ```bash
