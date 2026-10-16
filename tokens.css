@@ -21,6 +21,7 @@
   --tool-extract: var(--brand);
   --on-tool-extract: #ffffff;
   --tool-merge: var(--accent);
+  --tool-convert: var(--sun);
   --tool-markdown: var(--sage);
   --tool-viewer: var(--sand);
   --success: #2f6b4f;
@@ -65,6 +66,7 @@
   --tool-extract: #2e6159;
   --on-tool-extract: #ffffff;
   --tool-merge: var(--accent);
+  --tool-convert: var(--sun);
   --tool-markdown: var(--sage);
   --tool-viewer: var(--sand);
   --success: #7fc4a0;
@@ -95,6 +97,7 @@
     --tool-extract: #2e6159;
     --on-tool-extract: #ffffff;
     --tool-merge: var(--accent);
+    --tool-convert: var(--sun);
     --tool-markdown: var(--sage);
     --tool-viewer: var(--sand);
     --success: #7fc4a0;

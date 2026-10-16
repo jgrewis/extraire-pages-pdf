@@ -4,15 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bibliothèques limitées à leur version exacte ; aucune autre destination réseau autorisée -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/ https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/ https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/ https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/ https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/ https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/; worker-src blob:; connect-src data: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/ https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/ https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/ https://cdn.jsdelivr.net/npm/@tesseract.js-data/; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/ https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/ https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/ https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/ https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/ https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/ https://cdn.jsdelivr.net/npm/heic-to@1.5.2/dist/csp/; worker-src blob:; connect-src data: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/ https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/ https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/ https://cdn.jsdelivr.net/npm/@tesseract.js-data/; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Outils PDF</title>
-<meta name="description" content="Extraire des pages, fusionner des PDF, convertir un PDF en Markdown ou l'annoter, dans le navigateur.">
+<meta name="description" content="Extraire des pages, fusionner PDF et images, convertir HEIC, JPG, PNG et PDF, passer un PDF en Markdown ou l'annoter, dans le navigateur.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="tokens.css?v=4">
 <style>
   /* Contenu des tuiles : ink en thème clair ; en sombre, ink devient clair et passe sous 4,5:1 sur l'ocre et la sauge */
-  :root { --on-tool-merge: var(--on-accent); --on-tool-markdown: var(--on-accent); --on-tool-viewer: var(--ink); }
+  :root { --on-tool-merge: var(--on-accent); --on-tool-convert: var(--on-accent); --on-tool-markdown: var(--on-accent); --on-tool-viewer: var(--ink); }
 
   * { box-sizing: border-box; }
   html { scroll-padding-top: var(--space-4); }
@@ -34,6 +34,7 @@
   /* Couleur de chaque outil */
   .t-extract { background: var(--tool-extract); color: var(--on-tool-extract); }
   .t-merge { background: var(--tool-merge); color: var(--on-tool-merge); }
+  .t-convert { background: var(--tool-convert); color: var(--on-tool-convert); }
   .t-markdown { background: var(--tool-markdown); color: var(--on-tool-markdown); }
   .t-viewer { background: var(--tool-viewer); color: var(--on-tool-viewer); }
 
@@ -84,7 +85,7 @@
   .land { display: block; width: 100%; height: auto; margin-top: var(--space-12); }
   @media (min-width: 768px) {
     .view-home { padding-top: var(--space-24); }
-    .tiles { grid-template-columns: repeat(4, minmax(0, 176px)); justify-content: start; }
+    .tiles { grid-template-columns: repeat(5, minmax(0, 176px)); justify-content: start; }
     .tile .sq { width: 112px; height: 112px; }
     .steps { grid-template-columns: repeat(3, 1fr); }
     .land { margin-top: var(--space-16); }
@@ -138,6 +139,13 @@
   }
   input[type=radio], input[type=checkbox] { accent-color: var(--brand); width: 18px; height: 18px; margin: 0; flex: none; }
   .choice { display: inline-flex; align-items: center; gap: var(--space-2); cursor: pointer; }
+  .choice:has(input:disabled) { opacity: .45; cursor: not-allowed; }
+  /* Ligne d'options : intitulé puis choix */
+  .opt { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-6); }
+  .opt-label { min-width: 9.5em; }
+  @media (max-width: 560px) { .opt-label { flex-basis: 100%; } }
+  .note-ok { display: flex; align-items: center; gap: var(--space-2); color: var(--success); }
+  .note-ok .ic { width: 18px; height: 18px; }
 
   /* Cartes et messages */
   .card { background: var(--bg-card); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: var(--space-6); box-shadow: var(--shadow-card); }
@@ -155,7 +163,7 @@
   .section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-2) var(--space-4); margin-bottom: var(--space-4); }
 
   /* Carte de fichier */
-  .flist { list-style: none; padding: 0; display: grid; gap: var(--space-3); }
+  .flist { list-style: none; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
   .flist:empty { display: none; }
   .fcard {
     display: flex; align-items: center; gap: var(--space-4); padding: var(--space-3) var(--space-4);
@@ -309,6 +317,8 @@
     <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
     <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></symbol>
     <symbol id="i-fit" viewBox="0 0 24 24"><path d="M3 12h18M7 8l-4 4 4 4M17 8l4 4-4 4"/></symbol>
+    <symbol id="i-convert" viewBox="0 0 24 24"><path d="M4 8h14l-4-4M20 16H6l4 4"/></symbol>
+    <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></symbol>
     <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
   </defs>
 </svg>
@@ -322,6 +332,7 @@
     <nav class="site-nav" aria-label="Outils">
       <a class="label" href="#extraire" data-view="extract"><span class="dot t-extract"></span>Extraire</a>
       <a class="label" href="#fusionner" data-view="merge"><span class="dot t-merge"></span>Fusionner</a>
+      <a class="label" href="#convertir" data-view="convert"><span class="dot t-convert"></span>Convertir</a>
       <a class="label" href="#markdown" data-view="markdown"><span class="dot t-markdown"></span>Markdown</a>
       <a class="label" href="#visionneuse" data-view="viewer"><span class="dot t-viewer"></span>Visionneuse</a>
     </nav>
@@ -339,7 +350,8 @@
 
       <nav class="tiles" aria-label="Choisir un outil" style="margin-top: var(--space-12)">
         <a class="tile" href="#extraire"><span class="sq t-extract"><svg class="ic" aria-hidden="true"><use href="#i-extract"/></svg></span><span class="label">Extraire</span><span class="small muted">Garder, écarter ou réordonner des pages</span></a>
-        <a class="tile" href="#fusionner"><span class="sq t-merge"><svg class="ic" aria-hidden="true"><use href="#i-merge"/></svg></span><span class="label">Fusionner</span><span class="small muted">Assembler plusieurs PDF en un seul</span></a>
+        <a class="tile" href="#fusionner"><span class="sq t-merge"><svg class="ic" aria-hidden="true"><use href="#i-merge"/></svg></span><span class="label">Fusionner</span><span class="small muted">Assembler PDF et images en un seul PDF</span></a>
+        <a class="tile" href="#convertir"><span class="sq t-convert"><svg class="ic" aria-hidden="true"><use href="#i-convert"/></svg></span><span class="label">Convertisseur</span><span class="small muted">HEIC, JPG, PNG, WebP et PDF, d'un format à l'autre</span></a>
         <a class="tile" href="#markdown"><span class="sq t-markdown"><svg class="ic" aria-hidden="true"><use href="#i-markdown"/></svg></span><span class="label">PDF → Markdown</span><span class="small muted">Convertir un PDF, même scanné, en .md</span></a>
         <a class="tile" href="#visionneuse"><span class="sq t-viewer"><svg class="ic" aria-hidden="true"><use href="#i-viewer"/></svg></span><span class="label">Visionneuse</span><span class="small muted">Lire, remplir et annoter un PDF</span></a>
       </nav>
@@ -347,7 +359,7 @@
       <div style="margin-top: var(--space-16)">
         <h2 class="h2">Comment ça marche</h2>
         <ol class="steps">
-          <li><span class="num">1</span><div><h3 class="h3">Déposez votre fichier</h3><p class="muted">Glissez un PDF sur la page ou choisissez-le sur votre ordinateur.</p></div></li>
+          <li><span class="num">1</span><div><h3 class="h3">Déposez votre fichier</h3><p class="muted">Glissez un PDF ou une image sur la page, ou choisissez-le sur votre ordinateur.</p></div></li>
           <li><span class="num">2</span><div><h3 class="h3">Choisissez</h3><p class="muted">Les pages à garder, l'ordre des fichiers ou vos annotations.</p></div></li>
           <li><span class="num">3</span><div><h3 class="h3">Téléchargez</h3><p class="muted">Le résultat est prêt en quelques secondes, sans envoi sur un serveur.</p></div></li>
         </ol>
@@ -405,7 +417,7 @@
           <span class="small muted" id="xCount"></span>
           <div class="actions"><button type="button" class="btn btn-primary" id="xExport"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg>Extraire</button></div>
         </div>
-        <div class="send" data-from="extract" role="group" aria-label="Envoyer le résultat vers un autre outil"><span class="label muted">Envoyer vers</span><button type="button" class="btn btn-sm" data-to="merge"><span class="dot t-merge"></span>Fusionner</button><button type="button" class="btn btn-sm" data-to="markdown"><span class="dot t-markdown"></span>Markdown</button><button type="button" class="btn btn-sm" data-to="viewer"><span class="dot t-viewer"></span>Visionneuse</button></div>
+        <div class="send" data-from="extract" role="group" aria-label="Envoyer le résultat vers un autre outil"><span class="label muted">Envoyer vers</span><button type="button" class="btn btn-sm" data-to="merge"><span class="dot t-merge"></span>Fusionner</button><button type="button" class="btn btn-sm" data-to="convert"><span class="dot t-convert"></span>Convertir</button><button type="button" class="btn btn-sm" data-to="markdown"><span class="dot t-markdown"></span>Markdown</button><button type="button" class="btn btn-sm" data-to="viewer"><span class="dot t-viewer"></span>Visionneuse</button></div>
         <p class="msg small" id="xMsg" role="status"></p>
       </div>
 
@@ -419,23 +431,23 @@
     </div>
   </section>
 
-  <!-- ========== Fusionner des PDF ========== -->
+  <!-- ========== Fusionner ========== -->
   <section class="view wrap" data-view="merge" aria-labelledby="mTitle" hidden>
     <div class="tool-head">
       <span class="tool-mark t-merge"><svg class="ic" aria-hidden="true"><use href="#i-merge"/></svg></span>
-      <h1 class="h1 rule" id="mTitle">Fusionner des PDF</h1>
+      <h1 class="h1 rule" id="mTitle">Fusionner</h1>
     </div>
 
     <div id="mStart">
       <div class="dz" id="mDrop">
         <span class="dz-badge t-merge"><svg class="ic" aria-hidden="true"><use href="#i-upload"/></svg></span>
-        <p class="h3">Déposez vos PDF ici</p>
+        <p class="h3">Déposez vos PDF et images ici</p>
         <button type="button" class="btn btn-primary" id="mPick">Choisir des fichiers</button>
-        <p class="small muted">Traitement dans votre navigateur. Aucun fichier n'est conservé.</p>
+        <p class="small muted">PDF, JPG, PNG, WebP et HEIC : chaque image devient une page. Traitement dans votre navigateur, aucun fichier n'est conservé.</p>
       </div>
       <p class="small dz-err" id="mErr" role="alert"></p>
     </div>
-    <input type="file" id="mFile" accept="application/pdf,.pdf" multiple hidden>
+    <input type="file" id="mFile" accept="application/pdf,.pdf,image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif" multiple hidden>
 
     <div id="mWork" hidden>
       <div class="section-head">
@@ -443,6 +455,16 @@
         <span class="small muted">Glissez la poignée pour changer l'ordre</span>
       </div>
       <ul class="flist" id="mList"></ul>
+      <div class="card" id="mImgOpts" style="margin-top: var(--space-6)" hidden>
+        <h2 class="h3">Pages issues des images</h2>
+        <div class="opt" role="radiogroup" aria-labelledby="mSizeLabel">
+          <span class="small muted opt-label" id="mSizeLabel">Taille de page</span>
+          <label class="choice"><input type="radio" name="mSize" value="a4" checked> A4, image centrée</label>
+          <label class="choice"><input type="radio" name="mSize" value="image"> Taille de l'image</label>
+        </div>
+        <label class="choice"><input type="checkbox" id="mOcr" checked> Rendre le texte cherchable (OCR)</label>
+        <p class="small muted">L'OCR lit le texte à l'endroit : tournez d'abord les images couchées. Position GPS et métadonnées des photos sont retirées.</p>
+      </div>
       <div class="bar">
         <div style="display:flex;align-items:center;gap:var(--space-4)">
           <button type="button" class="btn-add" id="mAdd" aria-label="Ajouter un fichier" title="Ajouter un fichier"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg></button>
@@ -453,8 +475,84 @@
           <button type="button" class="btn btn-primary" id="mMerge"><svg class="ic" aria-hidden="true"><use href="#i-merge"/></svg>Fusionner</button>
         </div>
       </div>
-      <div style="margin-top: var(--space-4)"><div class="send" data-from="merge" role="group" aria-label="Envoyer le résultat vers un autre outil"><span class="label muted">Envoyer vers</span><button type="button" class="btn btn-sm" data-to="extract"><span class="dot t-extract"></span>Extraire</button><button type="button" class="btn btn-sm" data-to="markdown"><span class="dot t-markdown"></span>Markdown</button><button type="button" class="btn btn-sm" data-to="viewer"><span class="dot t-viewer"></span>Visionneuse</button></div></div>
+      <div style="margin-top: var(--space-4)"><div class="send" data-from="merge" role="group" aria-label="Envoyer le résultat vers un autre outil"><span class="label muted">Envoyer vers</span><button type="button" class="btn btn-sm" data-to="extract"><span class="dot t-extract"></span>Extraire</button><button type="button" class="btn btn-sm" data-to="convert"><span class="dot t-convert"></span>Convertir</button><button type="button" class="btn btn-sm" data-to="markdown"><span class="dot t-markdown"></span>Markdown</button><button type="button" class="btn btn-sm" data-to="viewer"><span class="dot t-viewer"></span>Visionneuse</button></div></div>
       <p class="msg small" id="mMsg" role="status" style="margin-top: var(--space-3)"></p>
+    </div>
+  </section>
+
+  <!-- ========== Convertisseur ========== -->
+  <section class="view wrap" data-view="convert" aria-labelledby="cTitle" hidden>
+    <div class="tool-head">
+      <span class="tool-mark t-convert"><svg class="ic" aria-hidden="true"><use href="#i-convert"/></svg></span>
+      <h1 class="h1 rule" id="cTitle">Convertisseur</h1>
+    </div>
+
+    <div id="cStart">
+      <div class="dz" id="cDrop">
+        <span class="dz-badge t-convert"><svg class="ic" aria-hidden="true"><use href="#i-upload"/></svg></span>
+        <p class="h3">Déposez vos images ou PDF ici</p>
+        <button type="button" class="btn btn-primary" id="cPick">Choisir des fichiers</button>
+        <p class="small muted">JPG, PNG, WebP, HEIC et PDF. Traitement dans votre navigateur, aucun fichier n'est conservé.</p>
+      </div>
+      <p class="small dz-err" id="cErr" role="alert"></p>
+    </div>
+    <input type="file" id="cFile" accept="application/pdf,.pdf,image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif" multiple hidden>
+
+    <div id="cWork" hidden>
+      <div class="section-head">
+        <h2 class="h3">Fichiers</h2>
+        <span class="small muted">Glissez la poignée pour changer l'ordre</span>
+      </div>
+      <ul class="flist" id="cList"></ul>
+
+      <div class="card" style="margin-top: var(--space-6)">
+        <h2 class="h3" id="cToLabel">Convertir en</h2>
+        <div class="modes" role="radiogroup" aria-labelledby="cToLabel">
+          <label class="choice"><input type="radio" name="cTo" value="jpg" checked> JPG</label>
+          <label class="choice"><input type="radio" name="cTo" value="png"> PNG</label>
+          <label class="choice"><input type="radio" name="cTo" value="pdf"> PDF</label>
+          <label class="choice"><input type="radio" name="cTo" value="light"> PDF allégé</label>
+        </div>
+        <div class="opt" id="cQuality" role="radiogroup" aria-labelledby="cQualityLabel">
+          <span class="small muted opt-label" id="cQualityLabel">Qualité</span>
+          <label class="choice"><input type="radio" name="cQuality" value="high" checked> Qualité élevée</label>
+          <label class="choice"><input type="radio" name="cQuality" value="light"> Fichier léger</label>
+        </div>
+        <div class="opt" id="cMaxBox" role="radiogroup" aria-labelledby="cMaxLabel">
+          <span class="small muted opt-label" id="cMaxLabel">Taille maximale</span>
+          <label class="choice"><input type="radio" name="cMax" value="0" checked> Originale</label>
+          <label class="choice"><input type="radio" name="cMax" value="2000"> 2000 px</label>
+          <label class="choice"><input type="radio" name="cMax" value="1200"> 1200 px</label>
+        </div>
+        <div id="cPdfOpts">
+          <div class="opt" role="radiogroup" aria-labelledby="cSizeLabel">
+            <span class="small muted opt-label" id="cSizeLabel">Taille de page</span>
+            <label class="choice"><input type="radio" name="cSize" value="a4" checked> A4, image centrée</label>
+            <label class="choice"><input type="radio" name="cSize" value="image"> Taille de l'image</label>
+          </div>
+          <label class="choice" style="margin-top: var(--space-4)"><input type="checkbox" id="cOcr" checked> Rendre le texte cherchable (OCR)</label>
+          <p class="small muted" style="margin-top: var(--space-2)">L'OCR lit le texte à l'endroit : tournez d'abord les images couchées.</p>
+        </div>
+        <div class="opt" id="cSplitBox" role="radiogroup" aria-labelledby="cSplitLabel">
+          <span class="small muted opt-label" id="cSplitLabel">Résultat</span>
+          <label class="choice"><input type="radio" name="cSplit" value="single" checked> Un seul PDF, dans l'ordre de la liste</label>
+          <label class="choice"><input type="radio" name="cSplit" value="separate"> Un PDF par fichier (.zip)</label>
+        </div>
+        <p class="small muted" id="cLightNote" hidden>Réduit et recompresse les photos JPEG du PDF. Le texte, les liens et les formulaires restent intacts. Un PDF fait de texte ou de dessins ne rétrécit pas.</p>
+        <p class="small note-ok" id="cGps" hidden><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>Position GPS et métadonnées retirées des images</p>
+        <div class="bar">
+          <div style="display:flex;align-items:center;gap:var(--space-4)">
+            <button type="button" class="btn-add" id="cAdd" aria-label="Ajouter un fichier" title="Ajouter un fichier"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg></button>
+            <span class="small muted" id="cCount"></span>
+          </div>
+          <div class="actions">
+            <button type="button" class="btn" id="cReset">Tout effacer</button>
+            <button type="button" class="btn btn-primary" id="cGo"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg>Convertir</button>
+          </div>
+        </div>
+        <div class="send" data-from="convert" role="group" aria-label="Envoyer le PDF obtenu vers un autre outil"><span class="label muted">Envoyer vers</span><button type="button" class="btn btn-sm" data-to="extract"><span class="dot t-extract"></span>Extraire</button><button type="button" class="btn btn-sm" data-to="merge"><span class="dot t-merge"></span>Fusionner</button><button type="button" class="btn btn-sm" data-to="markdown"><span class="dot t-markdown"></span>Markdown</button><button type="button" class="btn btn-sm" data-to="viewer"><span class="dot t-viewer"></span>Visionneuse</button></div>
+        <p class="msg small" id="cMsg" role="status"></p>
+      </div>
     </div>
   </section>
 
@@ -468,13 +566,13 @@
     <div>
       <div class="dz" id="mdDrop">
         <span class="dz-badge t-markdown"><svg class="ic" aria-hidden="true"><use href="#i-upload"/></svg></span>
-        <p class="h3" id="mdDropTitle">Déposez vos PDF ici</p>
+        <p class="h3" id="mdDropTitle">Déposez vos PDF ou images ici</p>
         <button type="button" class="btn btn-primary" id="mdPick">Choisir des fichiers</button>
         <p class="small muted">Conversion dans votre navigateur, dès le dépôt. Aucun fichier n'est conservé.</p>
       </div>
       <p class="small dz-err" id="mdErr" role="alert"></p>
     </div>
-    <input type="file" id="mdFile" accept="application/pdf,.pdf" multiple hidden>
+    <input type="file" id="mdFile" accept="application/pdf,.pdf,image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif" multiple hidden>
 
     <div>
       <ul class="flist" id="mdList"></ul>
@@ -486,7 +584,7 @@
         </div>
       </div>
       <p class="msg small" id="mdMsg" role="status" style="margin-top: var(--space-3)"></p>
-      <p class="small muted" style="margin-top: var(--space-2)">Repère les titres, paragraphes, listes et le gras. Les tableaux et les mises en page en colonnes sont rendus comme du texte simple. L'OCR (français et anglais) télécharge environ 10 Mo la première fois.</p>
+      <p class="small muted" style="margin-top: var(--space-2)">Repère les titres, paragraphes, listes et le gras. Les tableaux et les mises en page en colonnes sont rendus comme du texte simple. Une photo ou une image de document (JPG, PNG, WebP, HEIC) est lue par OCR. L'OCR (français et anglais) télécharge environ 10 Mo la première fois.</p>
     </div>
 
     <div id="mdPreviewWrap" hidden>
@@ -551,7 +649,7 @@
         <span class="sep"></span>
         <button type="button" class="ib ib-brand" id="vSave" aria-label="Télécharger le PDF annoté" title="Télécharger le PDF annoté"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg></button>
       </div>
-      <div style="margin-top: var(--space-4)"><div class="send" data-from="viewer" role="group" aria-label="Envoyer le résultat vers un autre outil"><span class="label muted">Envoyer vers</span><button type="button" class="btn btn-sm" data-to="extract"><span class="dot t-extract"></span>Extraire</button><button type="button" class="btn btn-sm" data-to="merge"><span class="dot t-merge"></span>Fusionner</button><button type="button" class="btn btn-sm" data-to="markdown"><span class="dot t-markdown"></span>Markdown</button></div></div>
+      <div style="margin-top: var(--space-4)"><div class="send" data-from="viewer" role="group" aria-label="Envoyer le résultat vers un autre outil"><span class="label muted">Envoyer vers</span><button type="button" class="btn btn-sm" data-to="extract"><span class="dot t-extract"></span>Extraire</button><button type="button" class="btn btn-sm" data-to="merge"><span class="dot t-merge"></span>Fusionner</button><button type="button" class="btn btn-sm" data-to="convert"><span class="dot t-convert"></span>Convertir</button><button type="button" class="btn btn-sm" data-to="markdown"><span class="dot t-markdown"></span>Markdown</button></div></div>
       <div id="vPages" class="tool-select"></div>
     </div>
   </section>
@@ -565,6 +663,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg==" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" integrity="sha512-q+4liFwdPC/bNdhUpZx6aXDx/h77yEQtn4I1slHydcbZK34nLaR3cAeYSJshoxIOq3mjEf7xJE8YWIUHMn+oCQ==" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js" integrity="sha512-TelkP3PCMJv+viMWynjKcvLsQzx6dJHvIGhfqzFtZKgAjKM1YPqcwzzDEoTc/BHjf43PcPzTQOjuTr4YdE8lNQ==" crossorigin="anonymous"></script>
-<script src="app.js"></script>
+<script src="app.js?v=4"></script>
 </body>
 </html>
