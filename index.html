@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bibliothèques limitées à leur version exacte ; aucune autre destination réseau autorisée -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/ https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/ https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/ https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/ https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/ https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/ https://cdn.jsdelivr.net/npm/heic-to@1.5.2/dist/csp/; worker-src blob:; connect-src data: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/ https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/ https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/ https://cdn.jsdelivr.net/npm/@tesseract.js-data/; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/ https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/ https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/ https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/ https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/ https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/ https://cdn.jsdelivr.net/npm/heic-to@1.5.2/dist/csp/; worker-src blob:; connect-src data: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/ https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/ https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/ https://cdn.jsdelivr.net/npm/@tesseract.js-data/ https://cdn.jsdelivr.net/npm/@jsquash/avif@2.1.1/codec/enc/; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Outils PDF</title>
 <meta name="description" content="Extraire des pages, fusionner PDF et images, convertir HEIC, JPG, PNG et PDF, passer un PDF en Markdown ou l'annoter, dans le navigateur.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="tokens.css?v=5">
+<link rel="stylesheet" href="tokens.css?v=6">
 <style>
   /* Contenu des tuiles : ink en thème clair ; en sombre, ink devient clair et passe sous 4,5:1 sur l'ocre et la sauge */
   :root { --on-tool-merge: var(--on-accent); --on-tool-convert: var(--on-accent); --on-tool-markdown: var(--on-accent); --on-tool-viewer: var(--ink); }
@@ -37,6 +37,7 @@
   .t-convert { background: var(--tool-convert); color: var(--on-tool-convert); }
   .t-markdown { background: var(--tool-markdown); color: var(--on-tool-markdown); }
   .t-viewer { background: var(--tool-viewer); color: var(--on-tool-viewer); }
+  .t-web { background: var(--tool-web); color: var(--on-tool-web); }
 
   /* Mise en page */
   .wrap { max-width: calc(1120px + 2 * var(--space-4)); margin: 0 auto; padding: 0 var(--space-4); }
@@ -85,11 +86,12 @@
   .land { display: block; width: 100%; height: auto; margin-top: var(--space-12); }
   @media (min-width: 768px) {
     .view-home { padding-top: var(--space-24); }
-    .tiles { grid-template-columns: repeat(5, minmax(0, 176px)); justify-content: start; }
+    .tiles { grid-template-columns: repeat(3, minmax(0, 176px)); justify-content: start; }
     .tile .sq { width: 112px; height: 112px; }
     .steps { grid-template-columns: repeat(3, 1fr); }
     .land { margin-top: var(--space-16); }
   }
+  @media (min-width: 1024px) { .tiles { grid-template-columns: repeat(6, minmax(0, 176px)); } }
 
   /* Zone de dépôt */
   .dz {
@@ -230,6 +232,55 @@
     font: 13px/1.6 ui-monospace, "Cascadia Mono", Consolas, monospace;
   }
 
+
+  /* Alléger pour le web : résultats et comparateur */
+  .w-fieldsets { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
+  .w-fieldsets fieldset { margin: 0; min-width: 0; padding: var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-md); display: grid; gap: var(--space-2); align-content: start; }
+  .w-fieldsets legend { padding: 0 var(--space-2); }
+  .w-fieldsets .choice { min-height: 44px; }
+  @media (min-width: 768px) { .w-fieldsets { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .w-results-list { list-style: none; padding: 0; display: grid; gap: var(--space-2); }
+  .w-row {
+    display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-1) var(--space-4); align-items: center;
+    padding: var(--space-3) var(--space-4); background: var(--bg-card); border: 1px solid var(--line); border-radius: var(--radius-md);
+  }
+  .w-name { font-weight: 500; min-width: 0; overflow-wrap: anywhere; }
+  .w-sizes { color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+  .w-gain { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .w-gain.good { color: var(--success); }
+  .w-gain.bad { color: var(--danger); }
+  .w-cmp { justify-self: start; min-height: 44px; }
+  @media (min-width: 768px) {
+    .w-row { grid-template-columns: minmax(0, 1fr) auto 5em auto; }
+    .w-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
+    .w-gain { text-align: right; }
+  }
+  .w-cmp-box {
+    position: relative; overflow: hidden; width: 100%; max-height: 70vh; margin: var(--space-4) auto 0; border-radius: var(--radius-md); border: 1px solid var(--line);
+    background-color: var(--bg-card);
+    background-image: linear-gradient(45deg, var(--bg-sunken) 25%, transparent 25%, transparent 75%, var(--bg-sunken) 75%), linear-gradient(45deg, var(--bg-sunken) 25%, transparent 25%, transparent 75%, var(--bg-sunken) 75%);
+    background-size: 16px 16px; background-position: 0 0, 8px 8px;
+    --cut: 50%;
+  }
+  /* Les deux images et la ligne vivent dans la même scène : superposées pixel pour pixel, elles défilent ensemble.
+     --nw (largeur du résultat en px) et --ar (rapport largeur / hauteur) sont posés par app.js. */
+  .w-cmp-stage { position: relative; width: min(100%, var(--nw, 100%), calc(70vh * var(--ar, 1))); margin: 0 auto; }
+  .w-cmp-stage img { display: block; width: 100%; height: auto; user-select: none; -webkit-user-select: none; }
+  /* Chaque image ne montre que son côté du curseur : une zone transparente du résultat ne laisse pas voir l'original */
+  .w-cmp-stage #wCmpBefore { clip-path: inset(0 calc(100% - var(--cut, 50%)) 0 0); }
+  .w-cmp-stage #wCmpAfter { position: absolute; inset: 0; height: 100%; clip-path: inset(0 0 0 var(--cut, 50%)); }
+  .w-cmp-line { position: absolute; top: 0; bottom: 0; left: var(--cut, 50%); width: 2px; margin-left: -1px; background: var(--bg-card); box-shadow: 0 0 0 1px rgba(30,43,40,.45); pointer-events: none; }
+  .w-cmp-tag {
+    position: absolute; top: var(--space-2); padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm);
+    background: var(--bg-card); color: var(--ink); border: 1px solid var(--line); pointer-events: none;
+  }
+  .w-cmp-tag.l { left: var(--space-2); }
+  .w-cmp-tag.r { right: var(--space-2); }
+  .w-cmp-range { display: block; width: 100%; min-height: 44px; margin: var(--space-3) 0 0; accent-color: var(--brand); cursor: ew-resize; }
+  /* Taille réelle : la scène prend la largeur en pixels du résultat et défile dans le cadre */
+  .w-cmp-box.real { overflow: auto; }
+  .w-cmp-box.real .w-cmp-stage { width: var(--nw, auto); }
+
   /* Visionneuse */
   .vbar {
     position: sticky; top: var(--space-2); z-index: 20; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3);
@@ -319,6 +370,7 @@
     <symbol id="i-fit" viewBox="0 0 24 24"><path d="M3 12h18M7 8l-4 4 4 4M17 8l4 4-4 4"/></symbol>
     <symbol id="i-convert" viewBox="0 0 24 24"><path d="M4 8h14l-4-4M20 16H6l4 4"/></symbol>
     <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></symbol>
+    <symbol id="i-web" viewBox="0 0 24 24"><path d="M20 4c-8 0-13 4-13 11l-1 5 5-1c7 0 9-8 9-15z"/><path d="M6 20l9-9"/></symbol>
     <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
   </defs>
 </svg>
@@ -335,6 +387,7 @@
       <a class="label" href="#convertir" data-view="convert"><span class="dot t-convert"></span>Convertir</a>
       <a class="label" href="#markdown" data-view="markdown"><span class="dot t-markdown"></span>Markdown</a>
       <a class="label" href="#visionneuse" data-view="viewer"><span class="dot t-viewer"></span>Visionneuse</a>
+      <a class="label" href="#alleger" data-view="web"><span class="dot t-web"></span>Alléger</a>
     </nav>
   </div>
 </header>
@@ -352,6 +405,7 @@
         <a class="tile" href="#extraire"><span class="sq t-extract"><svg class="ic" aria-hidden="true"><use href="#i-extract"/></svg></span><span class="label">Extraire</span><span class="small muted">Garder, écarter ou réordonner des pages</span></a>
         <a class="tile" href="#fusionner"><span class="sq t-merge"><svg class="ic" aria-hidden="true"><use href="#i-merge"/></svg></span><span class="label">Fusionner</span><span class="small muted">Assembler PDF et images en un seul PDF</span></a>
         <a class="tile" href="#convertir"><span class="sq t-convert"><svg class="ic" aria-hidden="true"><use href="#i-convert"/></svg></span><span class="label">Convertisseur</span><span class="small muted">HEIC, JPG, PNG, WebP et PDF, d'un format à l'autre</span></a>
+        <a class="tile" href="#alleger"><span class="sq t-web"><svg class="ic" aria-hidden="true"><use href="#i-web"/></svg></span><span class="label">Alléger pour le web</span><span class="small muted">Images et PDF les plus légers, qualité préservée</span></a>
         <a class="tile" href="#markdown"><span class="sq t-markdown"><svg class="ic" aria-hidden="true"><use href="#i-markdown"/></svg></span><span class="label">PDF → Markdown</span><span class="small muted">Convertir un PDF, même scanné, en .md</span></a>
         <a class="tile" href="#visionneuse"><span class="sq t-viewer"><svg class="ic" aria-hidden="true"><use href="#i-viewer"/></svg></span><span class="label">Visionneuse</span><span class="small muted">Lire, remplir et annoter un PDF</span></a>
       </nav>
@@ -556,6 +610,94 @@
     </div>
   </section>
 
+  <!-- ========== Alléger pour le web ========== -->
+  <section class="view wrap" data-view="web" aria-labelledby="wTitle" hidden>
+    <div class="tool-head">
+      <span class="tool-mark t-web"><svg class="ic" aria-hidden="true"><use href="#i-web"/></svg></span>
+      <h1 class="h1 rule" id="wTitle">Alléger pour le web</h1>
+    </div>
+    <p class="lead">Des images et des PDF le plus légers possible, à qualité préservée. Les fichiers ne quittent pas votre ordinateur. Les métadonnées et la position GPS sont retirées.</p>
+
+    <div id="wStart">
+      <div class="dz" id="wDrop">
+        <span class="dz-badge t-web"><svg class="ic" aria-hidden="true"><use href="#i-upload"/></svg></span>
+        <p class="h3">Déposez vos images ou vos PDF</p>
+        <button type="button" class="btn btn-primary" id="wPick">Choisir des fichiers</button>
+        <p class="small muted">JPG, PNG, WebP, HEIC, PDF</p>
+      </div>
+      <p class="small dz-err" id="wErr" role="alert"></p>
+    </div>
+    <input type="file" id="wFile" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif,application/pdf,.pdf" multiple hidden>
+
+    <div id="wWork" hidden>
+      <div class="section-head">
+        <h2 class="h3">Fichiers</h2>
+        <span class="small muted" id="wCount"></span>
+      </div>
+      <ul class="flist" id="wList"></ul>
+      <div class="actions" style="margin-top: var(--space-4); margin-left: 0">
+        <button type="button" class="btn" id="wAdd"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>Ajouter des fichiers</button>
+        <button type="button" class="btn" id="wReset">Tout retirer</button>
+      </div>
+
+      <div class="card" style="margin-top: var(--space-6)">
+        <div class="w-fieldsets">
+          <fieldset>
+            <legend class="h3">Formats</legend>
+            <label class="choice"><input type="checkbox" name="wFmt" value="avif" checked> AVIF — le plus léger</label>
+            <label class="choice"><input type="checkbox" name="wFmt" value="webp"> WebP — secours pour les anciens navigateurs</label>
+            <label class="choice"><input type="checkbox" name="wFmt" value="jpg"> JPG — image de partage (LinkedIn, WhatsApp)</label>
+          </fieldset>
+          <fieldset>
+            <legend class="h3">Qualité</legend>
+            <label class="choice"><input type="radio" name="wQuality" value="top"> Très haute</label>
+            <label class="choice"><input type="radio" name="wQuality" value="high" checked> Haute (recommandée)</label>
+            <label class="choice"><input type="radio" name="wQuality" value="light"> Légère</label>
+          </fieldset>
+          <fieldset>
+            <legend class="h3">Taille maximale (grand côté)</legend>
+            <label class="choice"><input type="radio" name="wMax" value="2560"> 2560 px</label>
+            <label class="choice"><input type="radio" name="wMax" value="1920" checked> 1920 px</label>
+            <label class="choice"><input type="radio" name="wMax" value="1280"> 1280 px</label>
+            <label class="choice"><input type="radio" name="wMax" value="800"> 800 px</label>
+            <label class="choice"><input type="radio" name="wMax" value="0"> Originale</label>
+          </fieldset>
+        </div>
+        <p class="small muted" id="wPdfNote" hidden>Les PDF : photos réduites à 2000 px et recompressées ; texte, liens et formulaires intacts.</p>
+        <div class="bar">
+          <div class="actions" style="margin-left: 0">
+            <button type="button" class="btn btn-primary" id="wGo"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg>Alléger et enregistrer</button>
+            <button type="button" class="btn" id="wStop" hidden>Arrêter</button>
+          </div>
+        </div>
+        <p class="msg small" id="wMsg" role="status" aria-live="polite"></p>
+      </div>
+
+      <section id="wResults" aria-labelledby="wResultsTitle" hidden style="margin-top: var(--space-8)">
+        <h2 class="h2" id="wResultsTitle" style="margin-bottom: var(--space-4)">Résultats</h2>
+        <ul class="w-results-list" id="wResultList"></ul>
+      </section>
+
+      <section id="wCompare" class="card" aria-labelledby="wCmpLabel" tabindex="-1" hidden style="margin-top: var(--space-6)">
+        <p class="h3" id="wCmpLabel"></p>
+        <div class="w-cmp-box" id="wCmpBox">
+          <div class="w-cmp-stage" id="wCmpStage">
+            <img id="wCmpBefore" alt="Original">
+            <img id="wCmpAfter" alt="Résultat">
+            <span class="w-cmp-line" aria-hidden="true"></span>
+          </div>
+          <span class="w-cmp-tag l label" aria-hidden="true">Original</span>
+          <span class="w-cmp-tag r label" aria-hidden="true">Résultat</span>
+        </div>
+        <input type="range" id="wCmpRange" class="w-cmp-range" min="0" max="100" value="50" aria-label="Position du comparateur">
+        <div class="actions" style="margin-left: 0; margin-top: var(--space-3)">
+          <button type="button" class="btn" id="wCmpZoom">Taille réelle</button>
+          <button type="button" class="btn" id="wCmpClose">Fermer</button>
+        </div>
+      </section>
+    </div>
+  </section>
+
   <!-- ========== PDF → Markdown ========== -->
   <section class="view wrap" data-view="markdown" aria-labelledby="mdTitle" hidden>
     <div class="tool-head">
@@ -663,6 +805,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg==" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" integrity="sha512-q+4liFwdPC/bNdhUpZx6aXDx/h77yEQtn4I1slHydcbZK34nLaR3cAeYSJshoxIOq3mjEf7xJE8YWIUHMn+oCQ==" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js" integrity="sha512-TelkP3PCMJv+viMWynjKcvLsQzx6dJHvIGhfqzFtZKgAjKM1YPqcwzzDEoTc/BHjf43PcPzTQOjuTr4YdE8lNQ==" crossorigin="anonymous"></script>
-<script src="app.js?v=5"></script>
+<script src="app.js?v=6"></script>
 </body>
 </html>

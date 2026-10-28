@@ -170,6 +170,81 @@ const canvasBlob = (canvas, type, quality) => new Promise((res, rej) =>
 // Rend la mémoire d'un grand canvas sans attendre le ramasse-miettes
 const freeCanvas = c => { c.width = c.height = 0; };
 
+/* ---------- Encodeur AVIF ---------- */
+// Chrome ne sait pas produire d'AVIF (toBlob renvoie du PNG) : libavif (@jsquash/avif 2.1.1, Apache-2.0).
+// Script et WebAssembly téléchargés avec contrôle d'intégrité, puis exécutés dans un worker blob:
+const AVIF_DIR = "https://cdn.jsdelivr.net/npm/@jsquash/avif@2.1.1/codec/enc/";
+const verifiedFetch = (url, integrity) =>
+  fetch(url, { integrity, mode: "cors", credentials: "omit" })
+    .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r; });
+// Code d'appel collé au module dans le worker. locateFile est obligatoire :
+// sans lui, le module cherche son .wasm via import.meta.url, invalide sur une URL blob:
+const AVIF_GLUE = `
+let enc = null;
+self.onmessage = async ({ data: { wasm, rgba, w, h, options } }) => {
+  try {
+    enc ??= Module({ noInitialRun: true, locateFile: f => f, instantiateWasm: (imp, cb) => {
+      const i = new WebAssembly.Instance(wasm, imp); cb(i); return i.exports;
+    } });
+    const out = (await enc).encode(new Uint8Array(rgba), w, h, options);
+    out ? self.postMessage(out, [out.buffer]) : self.postMessage(null);
+  } catch { self.postMessage(null); }
+};`;
+
+// 3,5 Mo chargés au premier encodage AVIF seulement ; le Module compilé reste en cache
+let avifLib = null;
+function loadAvif() {
+  avifLib ??= Promise.all([
+    verifiedFetch(AVIF_DIR + "avif_enc.js", "sha384-CSCv5W4tWhwNEV016b7Cf+Z7a+XAf4Z8tY/79BEKL+PJSO96cZrxu+ryYFU+den3")
+      .then(r => r.text()),
+    verifiedFetch(AVIF_DIR + "avif_enc.wasm", "sha384-05Hrg6MAEOyGEl+DBp138l7mH4bs/srHNfuLKY1bXS0R9WI/amgsW509B8FkaZWr")
+      .then(r => r.arrayBuffer()).then(b => WebAssembly.compile(b)),
+  ]).then(([js, wasm]) => ({ js, wasm }))
+    .catch(() => { avifLib = null; throw new Error("impossible de charger l'encodeur AVIF"); });
+  return avifLib;
+}
+
+let avifWorker = null;
+let avifJob = null; // encodage en cours : { reject }
+const avifKill = () => { avifWorker?.terminate(); avifWorker = null; };
+
+// Un seul encodage à la fois : un appel pendant un encodage est rejeté (l'appelant enchaîne les fichiers).
+// Le tampon de imageData est transféré au worker : l'ImageData de l'appelant devient vide.
+function avifEncode(imageData, quality) {
+  if (avifJob) return Promise.reject(new Error("un encodage AVIF est déjà en cours"));
+  return new Promise((res, rej) => {
+    const job = avifJob = { reject: rej };
+    const fail = e => { if (avifJob === job) avifJob = null; rej(e); };
+    loadAvif().then(({ js, wasm }) => {
+      if (avifJob !== job) return; // arrêté pendant le chargement
+      if (!avifWorker) {
+        const url = URL.createObjectURL(new Blob([js, AVIF_GLUE], { type: "text/javascript" }));
+        avifWorker = new Worker(url, { type: "module" });
+        URL.revokeObjectURL(url);
+      }
+      // Après un échec, le worker est recréé : l'état du WebAssembly n'est plus sûr
+      avifWorker.onmessage = ({ data }) => {
+        if (data) { avifJob = null; res(new Blob([data], { type: "image/avif" })); }
+        else { avifKill(); fail(new Error("encodage AVIF impossible")); }
+      };
+      avifWorker.onerror = () => { avifKill(); fail(new Error("encodage AVIF impossible")); };
+      const { width: w, height: h, data: { buffer } } = imageData;
+      // tune 2 = SSIM ; subsample 1 = 4:2:0 ; sharp YUV garde nets les contours des aplats
+      const options = { quality, qualityAlpha: -1, denoiseLevel: 0, tileColsLog2: 0, tileRowsLog2: 0, speed: 6,
+        subsample: 1, chromaDeltaQ: false, sharpness: 0, tune: 2, enableSharpYUV: true, bitDepth: 8, lossless: false };
+      avifWorker.postMessage({ wasm, rgba: buffer, w, h, options }, [buffer]);
+    }).catch(fail);
+  });
+}
+
+// Arrête l'encodage en cours ; le suivant recrée un worker sans retélécharger la bibliothèque
+function avifStop() {
+  avifKill();
+  const job = avifJob;
+  avifJob = null;
+  job?.reject(new DOMException("encodage AVIF arrêté", "AbortError"));
+}
+
 // Mots reconnus, regroupés par ligne, en pixels du canvas. L'OCR travaille sur 2500 px au plus.
 async function ocrLines(canvas) {
   const k = Math.min(1, 2500 / Math.max(canvas.width, canvas.height));
@@ -248,8 +323,8 @@ async function addImagePage(doc, canvas, { pageSize = "a4", ocr = false, quality
 }
 
 /* ---------- Navigation entre les outils ---------- */
-const VIEWS = { "#extraire": "extract", "#fusionner": "merge", "#convertir": "convert", "#markdown": "markdown", "#visionneuse": "viewer" };
-const TITLES = { home: "Outils PDF", extract: "Extraire des pages", merge: "Fusionner", convert: "Convertisseur", markdown: "PDF vers Markdown", viewer: "Visionneuse" };
+const VIEWS = { "#extraire": "extract", "#fusionner": "merge", "#convertir": "convert", "#markdown": "markdown", "#visionneuse": "viewer", "#alleger": "web" };
+const TITLES = { home: "Outils PDF", extract: "Extraire des pages", merge: "Fusionner", convert: "Convertisseur", markdown: "PDF vers Markdown", viewer: "Visionneuse", web: "Alléger pour le web" };
 let view = "home";
 const activeTab = () => view;
 function showView() {
@@ -842,6 +917,344 @@ $("cWork").addEventListener("change", e => { if (e.target.name) cRefresh(); });
 $("cReset").addEventListener("click", () => { if (C.busy) return; C.items.clear(); cList.replaceChildren(); setMsg($("cMsg"), ""); dzError("c", ""); cRefresh(); });
 new Sortable(cList, { handle: ".grip", animation: 150, ghostClass: "ghost", forceFallback: true, fallbackClass: "dragging", fallbackOnBody: true });
 
+/* ---------- Alléger pour le web ---------- */
+// Images -> AVIF, WebP et/ou JPG ; PDF -> lightenPdf(). Un fichier à la fois (photos de 50 Mpx),
+// chaque résultat écrit dès qu'il est prêt dans le dossier choisi : un arrêt garde ce qui est fait.
+const W = { items: new Map(), nextId: 1, busy: false, stop: false };
+const wList = $("wList");
+const wOrdered = () => [...wList.children].map(li => W.items.get(+li.dataset.id));
+const wFormats = () => [...document.querySelectorAll('input[name="wFmt"]:checked')].map(i => i.value);
+const W_NO_FMT = "Cochez au moins un format pour les images.";
+// Qualité par niveau : AVIF de 0 à 100, WebP et JPG de 0 à 1
+const W_QUALITY = {
+  top: { avif: 70, webp: 0.9, jpg: 0.92 },
+  high: { avif: 60, webp: 0.82, jpg: 0.85 },
+  light: { avif: 50, webp: 0.72, jpg: 0.78 },
+};
+const W_FMT = { avif: { label: "AVIF", mime: "image/avif" }, webp: { label: "WebP", mime: "image/webp" }, jpg: { label: "JPG", mime: "image/jpeg" } };
+// Avant / après du comparateur ; « before » n'existe que pour un HEIC ou une image tournée, que Chrome ne montre pas tels quels
+const WCMP = { token: 0, urls: [], from: null };
+const wSortable = new Sortable(wList, { handle: ".grip", animation: 150, ghostClass: "ghost", forceFallback: true, fallbackClass: "dragging", fallbackOnBody: true });
+
+function wRefresh() {
+  const items = wOrdered();
+  const { imgs, pdfs } = cCounts(items);
+  const noFmt = imgs > 0 && !wFormats().length;
+  $("wStart").hidden = items.length > 0;
+  $("wWork").hidden = items.length === 0;
+  $("wCount").textContent = [imgs && plural(imgs, "image"), pdfs && `${pdfs} PDF`].filter(Boolean).join(" · ");
+  $("wPdfNote").hidden = !pdfs;
+  $("wGo").disabled = W.busy || !items.length || noFmt;
+  $("wStop").hidden = !W.busy;
+  // Pendant le traitement : liste et options figées
+  document.querySelectorAll("#wWork fieldset").forEach(f => { f.disabled = W.busy; });
+  wList.querySelectorAll("button").forEach(b => { b.disabled = W.busy; });
+  $("wAdd").disabled = $("wReset").disabled = W.busy;
+  wSortable.option("disabled", W.busy);
+  if (W.busy) return;
+  const msg = $("wMsg");
+  if (noFmt) setMsg(msg, W_NO_FMT, "error");
+  else if (msg.textContent === W_NO_FMT) setMsg(msg, "");
+}
+
+async function wAdd(fileList) {
+  if (W.busy) return;
+  const errors = await addItems(fileList, W, wList, $("wMsg"), () => { setMsg($("wMsg"), ""); wRefresh(); });
+  const text = errors.length ? errors.join(" · ") + "." : "";
+  if (W.items.size) { dzError("w", ""); setMsg($("wMsg"), text, text ? "error" : ""); }
+  else dzError("w", text);
+  wRefresh();
+}
+
+// Arrondi inférieur : 99,7 % de gain s'affiche −99 %, jamais −100 %
+// Caractères refusés par Windows, macOS ou l'API de fichiers de Chrome (dont « / ») : remplacés par « _ »
+const wSafeName = name => name.replace(/[\\/:*?"<>|\u0000-\u001f]/g, "_");
+const wGain = (before, after) => `−${Math.floor(100 * (1 - after / before))} %`;
+
+// Une ligne de résultat : noms de fichiers posés par textContent uniquement (données non maîtrisées)
+function wRow({ name, before, after, kept, note, cmp }) {
+  const li = document.createElement("li");
+  li.className = "w-row";
+  const cell = (cls, text) => { const s = document.createElement("span"); s.className = cls; s.textContent = text; li.append(s); return s; };
+  cell("w-name", name).title = name;
+  cell("w-sizes", after == null ? fmtSize(before) : `${fmtSize(before)} → ${fmtSize(after)}`);
+  const gain = cell("w-gain", note || (kept ? wGain(before, after) : "plus lourd, non enregistré"));
+  if (!note) gain.classList.add(kept ? "good" : "bad");
+  if (cmp) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "btn btn-sm w-cmp";
+    b.textContent = "Comparer";
+    b.setAttribute("aria-label", `Comparer ${name} avec l'original`);
+    b.addEventListener("click", () => wCmpOpen(cmp, b));
+    li.append(b);
+  }
+  $("wResultList").append(li);
+  $("wResults").hidden = false;
+}
+
+function wClearResults() {
+  wCmpClose();
+  $("wResultList").replaceChildren();
+  $("wResults").hidden = true;
+}
+
+// Fichier absent du dossier ? Un dossier du même nom compte comme pris.
+async function wExists(dir, name) {
+  try { await dir.getFileHandle(name); return true; }
+  catch (e) {
+    if (e.name === "NotFoundError") return false;
+    if (e.name === "TypeMismatchError") return true;
+    throw e;
+  }
+}
+
+// Jamais d'écrasement : « nom (2).ext », « nom (3).ext »… jusqu'à un nom libre dans le lot et dans le dossier
+async function wWrite(dir, used, name, blob) {
+  let n, handle;
+  try {
+    do n = uniqueName(used, name); while (await wExists(dir, n));
+    handle = await dir.getFileHandle(n, { create: true });
+  } catch (e) {
+    throw new Error("écriture impossible dans le dossier choisi", { cause: e });
+  }
+  try {
+    const w = await handle.createWritable();
+    await w.write(blob);
+    await w.close();
+  } catch (e) {
+    await dir.removeEntry(n).catch(() => {}); // fichier vide créé par nous : on le retire, l'erreur d'origine prime
+    throw new Error("écriture impossible dans le dossier choisi", { cause: e });
+  }
+  return n;
+}
+
+// Image -> un résultat par format coché, chacun remis à `emit` dès qu'il est prêt
+async function wImage(it, { formats, level, maxSide }, step, emit) {
+  if (it.type === "heic") step("décodage HEIC");
+  const bm = await loadImage(it.file);
+  // AVIF et WebP gardent la transparence ; le JPG part d'une copie sur fond blanc
+  const c = renderImage(bm, { rotate: it.rotate, maxSide });
+  bm.close();
+  let white = null;
+  try {
+    for (const fmt of formats) {
+      if (W.stop) return;
+      const { label, mime } = W_FMT[fmt], q = W_QUALITY[level][fmt];
+      step(label);
+      let blob;
+      if (fmt === "avif") blob = await avifEncode(c.getContext("2d").getImageData(0, 0, c.width, c.height), q);
+      else {
+        if (fmt === "jpg") white ??= renderImage(c, { background: "#fff" });
+        blob = await canvasBlob(fmt === "jpg" ? white : c, mime, q);
+        // Un navigateur qui ne sait pas produire ce format renvoie du PNG sans le dire
+        if (blob.type !== mime) throw new Error(`ce navigateur ne sait pas produire le ${label}`);
+      }
+      await emit({ name: `${it.name}.${fmt}`, blob, label, w: c.width, h: c.height });
+    }
+  } finally {
+    freeCanvas(c);
+    if (white) freeCanvas(white);
+  }
+}
+
+async function wRun(picker) {
+  const items = wOrdered();
+  const msg = $("wMsg");
+  let dir = null;
+  if (picker) {
+    try { dir = await picker; }
+    catch (e) {
+      setMsg(msg, e.name === "AbortError" ? "Enregistrement annulé." : "Ce dossier ne peut pas être utilisé : choisissez-en un autre.", e.name === "AbortError" ? "" : "error");
+      W.busy = false;
+      wRefresh();
+      return;
+    }
+  }
+  W.stop = false;
+  wClearResults();
+  wRefresh();
+  const opts = { formats: wFormats(), level: radio("wQuality"), maxSide: +radio("wMax") };
+  const used = new Set(), outputs = [], notes = [], errors = [];
+  // Total : chaque original face à son résultat enregistré le plus léger
+  let savedCount = 0, heavier = 0, totalIn = 0, totalOut = 0, imageSaved = false;
+  try {
+    for (const [i, it] of items.entries()) {
+      if (W.stop) break;
+      const step = s => setMsg(msg, `${i + 1} / ${items.length} · ${it.file.name}${s ? " · " + s : ""}…`);
+      step("");
+      let best = Infinity;
+      // Écrit (ou met de côté pour le .zip) un résultat plus léger que l'original
+      const keep = async (rawName, blob) => {
+        const name = wSafeName(rawName);
+        const written = dir ? await wWrite(dir, used, name, blob) : name;
+        if (!dir) outputs.push({ name, blob });
+        savedCount++;
+        best = Math.min(best, blob.size);
+        return written;
+      };
+      try {
+        if (it.kind === "pdf") {
+          step("photos");
+          const r = await lightenPdf(it, step);
+          if (!r) {
+            notes.push(`${it.file.name} : déjà optimisé`);
+            wRow({ name: it.file.name, before: it.size, note: "déjà optimisé" });
+          }
+          else {
+            const blob = pdfBlob(r);
+            wRow({ name: await keep(it.name + "_allégé.pdf", blob), before: it.size, after: blob.size, kept: true });
+          }
+        } else {
+          const snap = { file: it.file, type: it.type, rotate: it.rotate };
+          await wImage(it, opts, step, async ({ name, blob, label, w, h }) => {
+            const kept = blob.size < it.size;
+            const written = kept ? await keep(name, blob) : name;
+            if (kept) imageSaved = true; else heavier++;
+            const cmp = { ...snap, blob, label, w, h, name: written };
+            wRow({ name: written, before: it.size, after: blob.size, kept, cmp });
+          });
+        }
+      } catch (e) {
+        // Arrêt demandé pendant un encodage AVIF : ce n'est pas une erreur
+        if (e.name === "AbortError") W.stop = true;
+        else errors.push(`« ${it.file.name} » : ${e.message}`);
+      }
+      if (best < Infinity) { totalIn += it.size; totalOut += best; }
+    }
+    const stopped = W.stop;
+    let saved = dir?.name;
+    if (!dir && outputs.length === 1) {
+      const { blob, name } = outputs[0];
+      saved = await saveBlob(blob, name, blob.type, name.split(".").pop());
+    } else if (!dir && outputs.length > 1) {
+      const zip = new JSZip(), names = new Set();
+      outputs.forEach(o => zip.file(uniqueName(names, o.name), o.blob));
+      saved = await saveBlob(await zip.generateAsync({ type: "blob" }), (items.length === 1 ? items[0].name : "alleger") + ".zip", "application/zip", "zip");
+    }
+    const cancelled = !dir && outputs.length > 0 && !saved;
+    if (cancelled) savedCount = 0;
+    const files = plural(savedCount, "fichier");
+    const done = `${files} ${savedCount > 1 ? "enregistrés" : "enregistré"}`;
+    const parts = [];
+    if (cancelled) parts.push("Enregistrement annulé.");
+    else if (stopped) parts.push(`Arrêté : ${done}` + (dir && savedCount ? ` dans « ${dir.name} »` : ""));
+    else if (!savedCount) parts.push("Aucun fichier enregistré");
+    else parts.push(`Prêt : ${done} ` + (dir ? `dans « ${dir.name} »` : `(${saved})`));
+    if (savedCount && totalIn) parts.push(`total ${fmtSize(totalIn)} → ${fmtSize(totalOut)} (${wGain(totalIn, totalOut)})`);
+    if (savedCount && imageSaved) parts.push("position GPS et métadonnées retirées");
+    if (heavier) parts.push(`${plural(heavier, "résultat")} plus lourd${heavier > 1 ? "s" : ""} que l'original, non enregistré${heavier > 1 ? "s" : ""}`);
+    parts.push(...notes, ...errors);
+    setMsg(msg, parts.join(" · "), errors.length ? "error" : savedCount ? "ok" : "");
+  } catch (e) {
+    setMsg(msg, "Erreur : " + e.message, "error");
+  } finally {
+    W.busy = false;
+    W.stop = false;
+    wRefresh();
+  }
+}
+
+// Le sélecteur de dossier exige le clic de l'utilisateur : il est ouvert avant tout await
+function wGo() {
+  if (W.busy || $("wGo").disabled) return;
+  W.busy = true;
+  wRefresh();
+  wRun(window.showDirectoryPicker ? showDirectoryPicker({ id: "alleger", mode: "readwrite" }) : null);
+}
+
+function wStop() {
+  if (!W.busy) return;
+  W.stop = true;
+  avifStop();
+  setMsg($("wMsg"), "Arrêt en cours…");
+}
+
+/* Comparateur avant / après */
+function wCmpRevoke() {
+  WCMP.urls.forEach(u => URL.revokeObjectURL(u));
+  WCMP.urls = [];
+}
+
+function wCmpClose() {
+  WCMP.token++;
+  wCmpRevoke();
+  $("wCmpBefore").removeAttribute("src");
+  $("wCmpAfter").removeAttribute("src");
+  $("wCompare").hidden = true;
+}
+
+function wCmpZoom(real) {
+  $("wCmpBox").classList.toggle("real", real);
+  $("wCmpZoom").textContent = real ? "Ajuster" : "Taille réelle";
+}
+
+function wCmpCut(v) {
+  $("wCmpRange").value = v;
+  $("wCmpBox").style.setProperty("--cut", v + "%");
+}
+
+// Chrome n'affiche pas le HEIC et ignore notre quart de tour : l'original est alors montré en JPEG 95 %
+async function wCmpBefore(r) {
+  if (r.type !== "heic" && !r.rotate) return r.file;
+  const bm = await loadImage(r.file);
+  const c = renderImage(bm, { rotate: r.rotate });
+  bm.close();
+  try { return await canvasBlob(c, "image/jpeg", 0.95); }
+  finally { freeCanvas(c); }
+}
+
+async function wCmpOpen(r, from) {
+  const token = ++WCMP.token;
+  const msg = $("wMsg");
+  let before;
+  try { before = await wCmpBefore(r); }
+  catch (e) { if (token === WCMP.token) setMsg(msg, `Comparaison impossible : ${e.message}`, "error"); return; }
+  if (token !== WCMP.token) return;
+  wCmpRevoke();
+  WCMP.from = from;
+  WCMP.urls = [URL.createObjectURL(before), URL.createObjectURL(r.blob)];
+  const stage = $("wCmpStage");
+  stage.style.setProperty("--nw", r.w + "px");
+  stage.style.setProperty("--ar", `${r.w / r.h}`);
+  $("wCmpBefore").src = WCMP.urls[0];
+  $("wCmpAfter").src = WCMP.urls[1];
+  $("wCmpLabel").textContent = `${r.name} · ${r.label} · ${fmtSize(r.blob.size)} (original ${fmtSize(r.file.size)})`;
+  wCmpCut(50);
+  wCmpZoom(false);
+  const box = $("wCompare");
+  box.hidden = false;
+  box.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  box.focus({ preventScroll: true });
+}
+
+wireDrop("w", "wFile");
+$("wAdd").addEventListener("click", () => $("wFile").click());
+$("wFile").addEventListener("change", e => { wAdd(e.target.files); e.target.value = ""; });
+$("wGo").addEventListener("click", wGo);
+$("wStop").addEventListener("click", wStop);
+$("wWork").addEventListener("change", e => { if (e.target.name === "wFmt") wRefresh(); });
+$("wReset").addEventListener("click", () => {
+  if (W.busy) return;
+  W.items.clear();
+  wList.replaceChildren();
+  wClearResults();
+  setMsg($("wMsg"), "");
+  dzError("w", "");
+  wRefresh();
+});
+$("wCmpRange").addEventListener("input", e => wCmpCut(e.target.value));
+$("wCmpZoom").addEventListener("click", () => wCmpZoom(!$("wCmpBox").classList.contains("real")));
+// À la fermeture, le focus revient au bouton « Comparer » qui a ouvert le comparateur
+function wCmpDismiss() {
+  const from = WCMP.from;
+  wCmpClose();
+  if (from?.isConnected) from.focus();
+}
+$("wCmpClose").addEventListener("click", wCmpDismiss);
+$("wCompare").addEventListener("keydown", e => { if (e.key === "Escape") wCmpDismiss(); });
+wRefresh();
+
 /* ---------- Envoi d'un outil à l'autre ---------- */
 // Chaque outil fournit son résultat (pages choisies et réordonnées, fusion, annotations) sans le télécharger.
 // L'outil de départ garde son état : on peut y revenir et continuer.
@@ -932,6 +1345,7 @@ document.addEventListener("drop", e => {
   else if (view === "convert") cAdd(files);
   else if (view === "markdown") mdAddFiles(files);
   else if (view === "viewer") viewerOpen(files[0]);
+  else if (view === "web") wAdd(files);
   else if ([...files].some(f => !isPdf(f) && isImageName(f))) { go("convert"); cAdd(files); }
   else {
     const pdfs = [...files].filter(isPdf);

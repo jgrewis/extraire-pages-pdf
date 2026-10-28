@@ -24,6 +24,8 @@
   --tool-convert: var(--sun);
   --tool-markdown: var(--sage);
   --tool-viewer: var(--sand);
+  --tool-web: #c9805e;
+  --on-tool-web: #1e2b28;
   --success: #2f6b4f;
   --danger: #a23b2a;
   --focus: var(--accent-text);
@@ -69,6 +71,8 @@
   --tool-convert: var(--sun);
   --tool-markdown: var(--sage);
   --tool-viewer: var(--sand);
+  --tool-web: #c9805e;
+  --on-tool-web: #151c1a;
   --success: #7fc4a0;
   --danger: #e58a78;
   --focus: var(--accent);
@@ -100,6 +104,8 @@
     --tool-convert: var(--sun);
     --tool-markdown: var(--sage);
     --tool-viewer: var(--sand);
+    --tool-web: #c9805e;
+    --on-tool-web: #151c1a;
     --success: #7fc4a0;
     --danger: #e58a78;
     --focus: var(--accent);
